@@ -27,8 +27,14 @@
     <ClInclude Include="Headers\Component.h">
       <Filter>Headers</Filter>
     </ClInclude>
-    <ClInclude Include="Headers\System.h" />
-    <ClInclude Include="Headers\TransformComponent.h" />
+    <ClInclude Include="Headers\TransformComponent.h">
+      <Filter>Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="Headers\GameObject.h" />
+    <ClInclude Include="Headers\System.h">
+      <Filter>Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="Headers\GraphicSystem.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="pch.cpp" />
@@ -40,8 +46,14 @@
     <ClCompile Include="Sources\Component.cpp">
       <Filter>Sources</Filter>
     </ClCompile>
-    <ClCompile Include="Sources\System.cpp" />
-    <ClCompile Include="Sources\TransformComponent.cpp" />
+    <ClCompile Include="Sources\TransformComponent.cpp">
+      <Filter>Sources</Filter>
+    </ClCompile>
+    <ClCompile Include="Sources\GameObject.cpp" />
+    <ClCompile Include="Sources\System.cpp">
+      <Filter>Sources</Filter>
+    </ClCompile>
+    <ClCompile Include="Sources\GraphicSystem.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="resource.rc" />

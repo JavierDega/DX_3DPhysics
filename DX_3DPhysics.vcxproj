@@ -159,6 +159,8 @@
     <ClInclude Include="DeviceResources.h" />
     <ClInclude Include="Game.h" />
     <ClInclude Include="Headers\Component.h" />
+    <ClInclude Include="Headers\GameObject.h" />
+    <ClInclude Include="Headers\GraphicSystem.h" />
     <ClInclude Include="Headers\System.h" />
     <ClInclude Include="Headers\TransformComponent.h" />
     <ClInclude Include="pch.h" />
@@ -175,6 +177,8 @@
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Create</PrecompiledHeader>
     </ClCompile>
     <ClCompile Include="Sources\Component.cpp" />
+    <ClCompile Include="Sources\GameObject.cpp" />
+    <ClCompile Include="Sources\GraphicSystem.cpp" />
     <ClCompile Include="Sources\System.cpp" />
     <ClCompile Include="Sources\TransformComponent.cpp" />
   </ItemGroup>
