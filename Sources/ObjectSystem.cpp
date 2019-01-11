@@ -117,5 +117,5 @@ void ObjectSystem::LoadScene1()
 	GameObject * mySphere2 = AddObject("Sphere2", Vector3(0, 2, -10.0f));
 	mySphere2->AddComponent(new RigidbodyComponent());
 
-	RemoveObject(mySphere2);
+
 }
