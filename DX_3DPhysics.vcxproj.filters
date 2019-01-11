@@ -1,9 +1,6 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup>
-    <Filter Include="Common">
-      <UniqueIdentifier>711bf8eb-89c2-470c-97cc-703121c256b1</UniqueIdentifier>
-    </Filter>
     <Filter Include="Assets">
       <UniqueIdentifier>efea4741-8575-408e-bc40-9173472e51ff</UniqueIdentifier>
       <Extensions>ico;cur;bmp;dds;dlg;fbx;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tga;tiff;tif;png;wav;mfcribbon-ms</Extensions>
@@ -13,6 +10,9 @@
     </Filter>
     <Filter Include="Sources">
       <UniqueIdentifier>{1268de68-457e-438b-b48d-b0edf8b94978}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Common">
+      <UniqueIdentifier>711bf8eb-89c2-470c-97cc-703121c256b1</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>
@@ -30,11 +30,22 @@
     <ClInclude Include="Headers\TransformComponent.h">
       <Filter>Headers</Filter>
     </ClInclude>
-    <ClInclude Include="Headers\GameObject.h" />
     <ClInclude Include="Headers\System.h">
       <Filter>Headers</Filter>
     </ClInclude>
-    <ClInclude Include="Headers\GraphicSystem.h" />
+    <ClInclude Include="Headers\GameObject.h">
+      <Filter>Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="Headers\GraphicSystem.h">
+      <Filter>Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="Headers\ObjectSystem.h">
+      <Filter>Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="Headers\RigidbodyComponent.h">
+      <Filter>Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="Headers\Shape.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="pch.cpp" />
@@ -49,11 +60,22 @@
     <ClCompile Include="Sources\TransformComponent.cpp">
       <Filter>Sources</Filter>
     </ClCompile>
-    <ClCompile Include="Sources\GameObject.cpp" />
     <ClCompile Include="Sources\System.cpp">
       <Filter>Sources</Filter>
     </ClCompile>
-    <ClCompile Include="Sources\GraphicSystem.cpp" />
+    <ClCompile Include="Sources\GameObject.cpp">
+      <Filter>Sources</Filter>
+    </ClCompile>
+    <ClCompile Include="Sources\GraphicSystem.cpp">
+      <Filter>Sources</Filter>
+    </ClCompile>
+    <ClCompile Include="Sources\ObjectSystem.cpp">
+      <Filter>Sources</Filter>
+    </ClCompile>
+    <ClCompile Include="Sources\RigidbodyComponent.cpp">
+      <Filter>Sources</Filter>
+    </ClCompile>
+    <ClCompile Include="Sources\Shape.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="resource.rc" />

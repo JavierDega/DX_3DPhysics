@@ -11,7 +11,7 @@ public:
 		DirectX::SimpleMath::Vector3  scale = DirectX::SimpleMath::Vector3( 1, 1, 1 ));
 	~TransformComponent();
 	//Messaging
-	//virtual bool Receive( ComponentMessage * msg);
+	virtual bool Receive(ComponentMessage msg);
 	//Variables
 	DirectX::SimpleMath::Vector3 m_position;
 	DirectX::SimpleMath::Quaternion  m_rotation;

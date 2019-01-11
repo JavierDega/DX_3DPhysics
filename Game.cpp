@@ -4,11 +4,12 @@
 
 #include "pch.h"
 #include "Game.h"
+#include "GraphicSystem.h"
+#include "ObjectSystem.h"
 
 extern void ExitGame();
 
 using namespace DirectX;
-using namespace DirectX::SimpleMath;
 
 using Microsoft::WRL::ComPtr;
 
@@ -53,8 +54,10 @@ void Game::Tick()
 void Game::Update(DX::StepTimer const& timer)
 {
     float elapsedTime = float(timer.GetElapsedSeconds());
+	float time = float(timer.GetTotalSeconds());
 
     // TODO: Add your game logic here.
+	ObjectSystem::GetInstance()->Update();
     elapsedTime;
 }
 #pragma endregion
@@ -76,7 +79,8 @@ void Game::Render()
 
     // TODO: Add your rendering code here.
     context;
-
+	//Draw
+	GraphicSystem::GetInstance()->Update();
     m_deviceResources->PIXEndEvent();
 
     // Show the new frame.
@@ -159,20 +163,32 @@ void Game::GetDefaultSize(int& width, int& height) const
 void Game::CreateDeviceDependentResources()
 {
     auto device = m_deviceResources->GetD3DDevice();
+	auto deviceContext = m_deviceResources->GetD3DDeviceContext();
+
 
     // TODO: Initialize device dependent objects here (independent of window size).
     device;
+	//Systems initialize
+	//ObjectFactory
+	ObjectSystem::GetInstance()->Initialize();
+	//Graphics
+	GraphicSystem::GetInstance()->Initialize(device, deviceContext);
 }
 
 // Allocate all memory resources that change on a window SizeChanged event.
 void Game::CreateWindowSizeDependentResources()
 {
+	D3D11_VIEWPORT screenViewport = m_deviceResources.get()->GetScreenViewport();
     // TODO: Initialize windows-size dependent objects here.
+	ObjectSystem::GetInstance()->InitWindow();
+	GraphicSystem::GetInstance()->InitWindow(screenViewport);
 }
 
 void Game::OnDeviceLost()
 {
     // TODO: Add Direct3D resource cleanup here.
+	ObjectSystem::GetInstance()->Reset();
+	GraphicSystem::GetInstance()->Reset();
 }
 
 void Game::OnDeviceRestored()

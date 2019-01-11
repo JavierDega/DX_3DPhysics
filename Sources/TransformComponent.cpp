@@ -16,3 +16,8 @@ TransformComponent::~TransformComponent() {
 
 
 }
+
+bool TransformComponent::Receive(ComponentMessage msg)
+{
+	return false;
+}
