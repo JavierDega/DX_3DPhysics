@@ -1,15 +1,25 @@
-#include "Component.h"
+#ifndef RIGIDBODYCOMPONENT_H_
+#define RIGIDBODYCOMPONENT_H_
 
+#include "Component.h"
+#include "Shape.h"
 //@Handles physics, and indirectly, holds all graphic/render related data
 class RigidbodyComponent :
 	public Component
 {
 public:
-	RigidbodyComponent(float radius = 0.5f);
+	//Funcs
+	//Sphere constructor
+	RigidbodyComponent(float radius = 0.5f, float mass = 100.0f, float m_isKinematic = false);
 	virtual ~RigidbodyComponent();
 	//Messaging
 	virtual bool Receive(ComponentMessage msg);
+
 	//Variables
-	std::unique_ptr<DirectX::GeometricPrimitive> m_shape;
-	float m_radius;
+	Shape * m_shape;
+	float m_mass;
+	bool m_isKinematic;
+	//Semi euler
+	DirectX::SimpleMath::Vector3 m_force, m_acceleration, m_velocity;
 };
+#endif /*RIGIDBODYCOMPONENT_H_*/

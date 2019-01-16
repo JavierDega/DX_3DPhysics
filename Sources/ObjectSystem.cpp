@@ -54,6 +54,7 @@ GameObject * ObjectSystem::AddObject(string name, Vector3 position) {
 		//This means its going to reallocate
 		m_reallocate = true;
 	}
+	//@Beware, a copy is created, copied to vector, then destroyed
 	m_objectList.push_back(GameObject(name, position));
 
 	//Has just reallocated

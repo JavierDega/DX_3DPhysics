@@ -162,8 +162,10 @@
     <ClInclude Include="Headers\GameObject.h" />
     <ClInclude Include="Headers\GraphicSystem.h" />
     <ClInclude Include="Headers\ObjectSystem.h" />
+    <ClInclude Include="Headers\PhysicSystem.h" />
     <ClInclude Include="Headers\RigidbodyComponent.h" />
     <ClInclude Include="Headers\Shape.h" />
+    <ClInclude Include="Headers\Sphere.h" />
     <ClInclude Include="Headers\System.h" />
     <ClInclude Include="Headers\TransformComponent.h" />
     <ClInclude Include="pch.h" />
@@ -183,8 +185,10 @@
     <ClCompile Include="Sources\GameObject.cpp" />
     <ClCompile Include="Sources\GraphicSystem.cpp" />
     <ClCompile Include="Sources\ObjectSystem.cpp" />
+    <ClCompile Include="Sources\PhysicSystem.cpp" />
     <ClCompile Include="Sources\RigidbodyComponent.cpp" />
     <ClCompile Include="Sources\Shape.cpp" />
+    <ClCompile Include="Sources\Sphere.cpp" />
     <ClCompile Include="Sources\System.cpp" />
     <ClCompile Include="Sources\TransformComponent.cpp" />
   </ItemGroup>
