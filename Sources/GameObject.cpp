@@ -21,8 +21,6 @@ void GameObject::AddComponent(Component * component) {
 	//We add the component to the vector, and we set reference (Just in case)
 	component->m_owner = this;
 	m_components.push_back(component);
-
-	//@Print obj address: GraphicSystem::GetInstance()->AddLog("Obj Addr: " + to_string((int)this));
 }
 
 void GameObject::Send(ComponentMessage msg)

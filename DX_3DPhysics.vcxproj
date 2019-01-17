@@ -92,13 +92,13 @@
       <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
       <FloatingPointModel>Fast</FloatingPointModel>
       <EnableEnhancedInstructionSet>StreamingSIMDExtensions2</EnableEnhancedInstructionSet>
-      <AdditionalIncludeDirectories>C:\Users\javie\OneDrive\Documents\CT6PRO\DX_3DPhysics\DX_3DPhysics;C:\Users\javie\OneDrive\Documents\CT6PRO\DX_3DPhysics\DX_3DPhysics\Headers;C:\Users\javie\OneDrive\Documents\CT6PRO\DX_3DPhysics\DX_3DPhysics\Sources;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>C:\Users\javie\Documents\CT6PRO\DX_3DPhysics\DX_3DPhysics;C:\Users\javie\Documents\CT6PRO\DX_3DPhysics\DX_3DPhysics\Headers;C:\Users\javie\Documents\CT6PRO\DX_3DPhysics\DX_3DPhysics\Sources;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <AdditionalDependencies>d3d11.lib;dxgi.lib;dxguid.lib;uuid.lib;kernel32.lib;user32.lib;gdi32.lib;winspool.lib;comdlg32.lib;advapi32.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;odbc32.lib;odbccp32.lib;%(AdditionalDependencies)</AdditionalDependencies>
-      <AdditionalLibraryDirectories>C:\Users\javie\OneDrive\Documents\CT6PRO\DX_3DPhysics\DX_3DPhysics;C:\Users\javie\OneDrive\Documents\CT6PRO\DX_3DPhysics\DX_3DPhysics\Headers;C:\Users\javie\OneDrive\Documents\CT6PRO\DX_3DPhysics\DX_3DPhysics\Sources;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalLibraryDirectories>C:\Users\javie\Documents\CT6PRO\DX_3DPhysics\DX_3DPhysics;C:\Users\javie\Documents\CT6PRO\DX_3DPhysics\DX_3DPhysics\Headers;C:\Users\javie\Documents\CT6PRO\DX_3DPhysics\DX_3DPhysics\Sources;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
@@ -162,8 +162,10 @@
     <ClInclude Include="Headers\GameObject.h" />
     <ClInclude Include="Headers\GraphicSystem.h" />
     <ClInclude Include="Headers\ObjectSystem.h" />
+    <ClInclude Include="Headers\PhysicSystem.h" />
     <ClInclude Include="Headers\RigidbodyComponent.h" />
     <ClInclude Include="Headers\Shape.h" />
+    <ClInclude Include="Headers\Sphere.h" />
     <ClInclude Include="Headers\System.h" />
     <ClInclude Include="Headers\TransformComponent.h" />
     <ClInclude Include="pch.h" />
@@ -183,8 +185,10 @@
     <ClCompile Include="Sources\GameObject.cpp" />
     <ClCompile Include="Sources\GraphicSystem.cpp" />
     <ClCompile Include="Sources\ObjectSystem.cpp" />
+    <ClCompile Include="Sources\PhysicSystem.cpp" />
     <ClCompile Include="Sources\RigidbodyComponent.cpp" />
     <ClCompile Include="Sources\Shape.cpp" />
+    <ClCompile Include="Sources\Sphere.cpp" />
     <ClCompile Include="Sources\System.cpp" />
     <ClCompile Include="Sources\TransformComponent.cpp" />
   </ItemGroup>

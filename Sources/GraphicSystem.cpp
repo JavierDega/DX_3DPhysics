@@ -1,6 +1,8 @@
 #include "pch.h"
 #include "GraphicSystem.h"
 #include "ObjectSystem.h"
+#include "PhysicSystem.h"
+#include "Sphere.h"
 #include <stdio.h>
 
 using namespace std;
@@ -23,7 +25,7 @@ GraphicSystem * GraphicSystem::GetInstance()
 GraphicSystem::GraphicSystem() {
 	m_cam = { 0.0F, 0.0F, 0.0F };
 	m_up = { 0.0F, 1.0F, 0.0F };
-	m_look = { 0.0F, 0.0F, -1.0F };
+	m_look = { 0.0F, 0.0F, 1.0F };
 }
 //Destructor (Singleton so..?)
 GraphicSystem::~GraphicSystem() {
@@ -38,7 +40,11 @@ void GraphicSystem::Initialize(ID3D11Device1* device, ID3D11DeviceContext1 * dev
 
 	for (unsigned int i = 0; i < rigidbodies.size(); i++) {
 		//Init each
-		rigidbodies[i]->m_shape = GeometricPrimitive::CreateSphere(deviceContext, rigidbodies[i]->m_radius * 2 );
+		//Dynamic cast
+		Sphere * theSphere = dynamic_cast<Sphere*>(rigidbodies[i]->m_shape);
+		if (theSphere) {
+			theSphere->m_primitive = GeometricPrimitive::CreateSphere(deviceContext,theSphere->m_radius * 2);
+		}
 	}
 }
 void GraphicSystem::InitWindow(D3D11_VIEWPORT screenViewport)
@@ -51,6 +57,7 @@ void GraphicSystem::InitWindow(D3D11_VIEWPORT screenViewport)
 void GraphicSystem::Update(float dt) {
 	///Draw all shapes in rigidbodyComponents
 	ObjectSystem * os = ObjectSystem::GetInstance();
+	PhysicSystem * ps = PhysicSystem::GetInstance();
 
 	//Cam look at
 	m_view = Matrix::CreateLookAt(m_cam, m_look, m_up);
@@ -63,8 +70,9 @@ void GraphicSystem::Update(float dt) {
 		TransformComponent currentTransform = currentRb->m_owner->m_transform;
 
 		Matrix m_world = Matrix::CreateTranslation(currentTransform.m_position);
-		currentRb->m_shape->Draw( m_world, m_view, m_proj);
+		currentRb->m_shape->m_primitive->Draw( m_world, m_view, m_proj );
 	}
+
 }
 
 void GraphicSystem::Reset()
@@ -76,6 +84,6 @@ void GraphicSystem::Reset()
 
 	for (unsigned int i = 0; i < rigidbodies.size(); i++) {
 		//Init each
-		rigidbodies[i]->m_shape.reset();
+		rigidbodies[i]->m_shape->m_primitive.reset();
 	}
 }

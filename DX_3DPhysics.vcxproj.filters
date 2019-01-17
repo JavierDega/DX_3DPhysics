@@ -45,7 +45,15 @@
     <ClInclude Include="Headers\RigidbodyComponent.h">
       <Filter>Headers</Filter>
     </ClInclude>
-    <ClInclude Include="Headers\Shape.h" />
+    <ClInclude Include="Headers\PhysicSystem.h">
+      <Filter>Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="Headers\Shape.h">
+      <Filter>Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="Headers\Sphere.h">
+      <Filter>Headers</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="pch.cpp" />
@@ -75,7 +83,15 @@
     <ClCompile Include="Sources\RigidbodyComponent.cpp">
       <Filter>Sources</Filter>
     </ClCompile>
-    <ClCompile Include="Sources\Shape.cpp" />
+    <ClCompile Include="Sources\PhysicSystem.cpp">
+      <Filter>Sources</Filter>
+    </ClCompile>
+    <ClCompile Include="Sources\Shape.cpp">
+      <Filter>Sources</Filter>
+    </ClCompile>
+    <ClCompile Include="Sources\Sphere.cpp">
+      <Filter>Sources</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="resource.rc" />

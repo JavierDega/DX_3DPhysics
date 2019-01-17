@@ -54,6 +54,7 @@ GameObject * ObjectSystem::AddObject(string name, Vector3 position) {
 		//This means its going to reallocate
 		m_reallocate = true;
 	}
+	//@Beware, a copy is created, copied to vector, then destroyed
 	m_objectList.push_back(GameObject(name, position));
 
 	//Has just reallocated
@@ -110,12 +111,16 @@ vector< RigidbodyComponent * > ObjectSystem::GetRigidbodyComponentList() {
 void ObjectSystem::LoadScene1()
 {
 	//Create some spheres
-	GameObject * mySphere = AddObject( "Sphere", Vector3( 0, 0, -10.0f));
-	mySphere->AddComponent(new RigidbodyComponent());
+	GameObject * mySphere = AddObject( "Sphere", Vector3( -2, 0, 9.5f));
+	RigidbodyComponent * rb1 = new RigidbodyComponent();
+	rb1->m_force = Vector3(500.0f, 0.0f, 0.0f);
+	mySphere->AddComponent(rb1);
 
 	//@Same bug as Wii, dynamic allocation
-	GameObject * mySphere2 = AddObject("Sphere2", Vector3(0, 2, -10.0f));
-	mySphere2->AddComponent(new RigidbodyComponent());
+	GameObject * mySphere2 = AddObject("Sphere2", Vector3(2, 0, 10.0f));
+	RigidbodyComponent * rb2 = new RigidbodyComponent();
+	rb2->m_force = Vector3(-500.0f, 0.0f, 0.0f);
+	mySphere2->AddComponent(rb2);
 
 
 }

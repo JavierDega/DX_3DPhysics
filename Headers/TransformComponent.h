@@ -14,7 +14,7 @@ public:
 	virtual bool Receive(ComponentMessage msg);
 	//Variables
 	DirectX::SimpleMath::Vector3 m_position;
-	DirectX::SimpleMath::Quaternion  m_rotation;
-	DirectX::SimpleMath::Vector3  m_scale;
+	DirectX::SimpleMath::Quaternion m_rotation;
+	DirectX::SimpleMath::Vector3 m_scale;
 };
 #endif /*TRANSFORMCOMPONENT_H_*/
