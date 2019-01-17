@@ -5,7 +5,7 @@
 
 using namespace DirectX;
 using namespace SimpleMath;
-
+using namespace std;
 
 
 //Instance
@@ -69,29 +69,33 @@ void PhysicSystem::Reset()
 }
 //Physics Update
 void PhysicSystem::UpdatePhysics(float dt) {
-	std::vector<RigidbodyComponent*> m_rigidbodies = ObjectSystem::GetInstance()->GetRigidbodyComponentList();
-	for (unsigned int i = 0; i < m_rigidbodies.size(); i++) {
-		
-		//Kinematics
-		RigidbodyComponent* currentRb = m_rigidbodies[i];
-		currentRb->m_force += m_gravity;
+	vector<RigidbodyComponent*> m_rigidbodies = ObjectSystem::GetInstance()->GetRigidbodyComponentList();
 
-		//SSScheme
-		//BroadPhase
-		//Medium Phase
-		//Narrow Phase
-		//@To avoid double checks, we only check upwards
-		for (unsigned int j = i + 1; j < m_rigidbodies.size(); j++) {
-			NarrowPhase(currentRb, m_rigidbodies[j]);
-		}
-		//Apply forces
+	vector<pair<RigidbodyComponent*, RigidbodyComponent*>> m_collidingPairs;
+
+	for (unsigned int i = 0; i < m_rigidbodies.size(); i++) {
+		RigidbodyComponent* currentRb = m_rigidbodies[i];
+		//Kinematics
+		currentRb->m_force += m_gravity;
 		currentRb->m_acceleration = currentRb->m_force / currentRb->m_mass;
 		currentRb->m_velocity += currentRb->m_acceleration;
 		currentRb->m_owner->m_transform.m_position += currentRb->m_velocity*dt;
-
 		//Forces are computed every frame
 		currentRb->m_force = Vector3(0, 0, 0);
 
+		//SSScheme
+		//BroadPhase
+		for (unsigned int j = i + 1; j < m_rigidbodies.size(); j++) {
+			//@To avoid double checks, we only check upwards
+			if(BroadPhase(currentRb, m_rigidbodies[j])) m_collidingPairs.push_back(make_pair(currentRb, m_rigidbodies[j]));
+		}
+	}
+
+	//Medium Phase
+
+	//Narrow Phase
+	for (unsigned int i = 0; i < m_collidingPairs.size(); i++) {
+		NarrowPhase(m_collidingPairs[i].first, m_collidingPairs[i].second);
 	}
 
 }
@@ -116,7 +120,7 @@ bool PhysicSystem::NarrowPhase(RigidbodyComponent * rb1, RigidbodyComponent * rb
 		// A and B are touching
 		//@Impulse based collision resolution
 
-		//Displacement
+		///1:Displacement
 		//Cases? Both moving, one of them kinematic/sleeping and the other one moving
 		//@Static collision resolution based on speed?
 		//float ratio = rb1->m_velocity.Length / rb2->m_velocity.Length;
@@ -126,7 +130,7 @@ bool PhysicSystem::NarrowPhase(RigidbodyComponent * rb1, RigidbodyComponent * rb
 		t1->m_position -= overlap * (t1->m_position - t2->m_position) / dist;
 		t2->m_position -= overlap * (t1->m_position - t2->m_position) / dist;
 		
-		//Dynamic resolution
+		///2:Dynamic resolution
 		//http://www.gamasutra.com/view/feature/131424/pool_hall_lessons_fast_accurate_.php?page=3
 		// First, find the normalized vector n from the center of 
 		// circle1 to the center of circle2
@@ -144,7 +148,7 @@ bool PhysicSystem::NarrowPhase(RigidbodyComponent * rb1, RigidbodyComponent * rb
 		// optimizedP =  2(a1 - a2)
 		//              -----------
 		//                m1 + m2
-		float optimizedP = (2.0 * (a1 - a2)) / (rb1->m_mass + rb2->m_mass);
+		float optimizedP = (2.0f * (a1 - a2))/(rb1->m_mass + rb2->m_mass);
 
 		// Calculate v1', the new movement vector of circle1
 		// v1' = v1 - optimizedP * m2 * n
@@ -156,4 +160,39 @@ bool PhysicSystem::NarrowPhase(RigidbodyComponent * rb1, RigidbodyComponent * rb
 
 	}
 	return true;
+}
+
+bool PhysicSystem::BroadPhase(RigidbodyComponent * rb1, RigidbodyComponent * rb2) {
+	//@Compute AABBs
+	Sphere * sphere1 = dynamic_cast<Sphere*>(rb1->m_shape);
+	Sphere * sphere2 = dynamic_cast<Sphere*>(rb2->m_shape);
+	TransformComponent * t1 = &rb1->m_owner->m_transform;
+	TransformComponent * t2 = &rb2->m_owner->m_transform;
+
+	AABB box1 = sphere1->ComputeAABB();
+	box1.m_minExtent += t1->m_position;
+	box1.m_maxExtent += t1->m_position;
+
+	AABB box2 = sphere2->ComputeAABB();
+	box2.m_minExtent += t2->m_position;
+	box2.m_maxExtent += t1->m_position;
+	
+	//Define bounds
+	float thisRight = box1.m_maxExtent.x; float otherRight = box2.m_maxExtent.x;
+	float thisLeft = box1.m_minExtent.x; float otherLeft = box2.m_minExtent.x;
+	float thisTop = box1.m_maxExtent.y; float otherTop = box2.m_maxExtent.y;
+	float thisBottom = box1.m_minExtent.y; float otherBottom = box2.m_minExtent.y;
+	float thisFront = box1.m_maxExtent.z; float otherFront = box2.m_maxExtent.z;
+	float thisBack = box1.m_minExtent.z; float otherBack = box2.m_minExtent.z;
+
+	return (!(
+		thisRight < otherLeft
+		|| thisLeft > otherRight
+		|| thisTop < otherBottom
+		|| thisBottom > otherTop
+		|| thisFront < otherBack
+		|| thisBack > otherFront
+		)
+		);
+
 }

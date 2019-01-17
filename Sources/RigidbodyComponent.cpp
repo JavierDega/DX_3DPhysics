@@ -5,7 +5,7 @@
 using namespace DirectX;
 using namespace SimpleMath;
 
-RigidbodyComponent::RigidbodyComponent(float radius, float mass, float isKinematic)
+RigidbodyComponent::RigidbodyComponent(float radius, float mass, bool isKinematic)
 	: m_mass(mass), m_isKinematic(isKinematic)
 {
 	m_shape = new Sphere(radius);

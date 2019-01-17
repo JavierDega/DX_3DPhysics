@@ -30,6 +30,7 @@ public:
 	virtual void Reset();
 	//Utility
 	void UpdatePhysics(float dt);
+	bool BroadPhase(RigidbodyComponent * rb1, RigidbodyComponent *rb2);
 	bool NarrowPhase(RigidbodyComponent * rb1, RigidbodyComponent *rb2);
 
 	//Variables
@@ -37,5 +38,6 @@ public:
 	//Timestep
 	float m_minDt;
 	float m_accumulator;
+
 };
 #endif /*PHYSICSYSTEM_H_*/

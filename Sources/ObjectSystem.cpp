@@ -113,14 +113,20 @@ void ObjectSystem::LoadScene1()
 	//Create some spheres
 	GameObject * mySphere = AddObject( "Sphere", Vector3( -2, 0, 9.5f));
 	RigidbodyComponent * rb1 = new RigidbodyComponent();
-	rb1->m_force = Vector3(500.0f, 0.0f, 0.0f);
+	//rb1->m_force = Vector3(500.0f, 0.0f, 0.0f);
 	mySphere->AddComponent(rb1);
 
 	//@Same bug as Wii, dynamic allocation
 	GameObject * mySphere2 = AddObject("Sphere2", Vector3(2, 0, 10.0f));
 	RigidbodyComponent * rb2 = new RigidbodyComponent();
-	rb2->m_force = Vector3(-500.0f, 0.0f, 0.0f);
+	//rb2->m_force = Vector3(-500.0f, 0.0f, 0.0f);
 	mySphere2->AddComponent(rb2);
+
+
+
+	//Sphere bounds?
+	GameObject * mySphereBound = AddObject("SphereBound", Vector3(0, -10, 15.f));
+	mySphereBound->AddComponent(new RigidbodyComponent(10.f, 9999.f, true));
 
 
 }
