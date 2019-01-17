@@ -5,6 +5,7 @@
 #include "pch.h"
 #include "Game.h"
 #include "ObjectSystem.h"
+#include "InputSystem.h"
 #include "PhysicSystem.h"
 #include "GraphicSystem.h"
 
@@ -37,6 +38,7 @@ void Game::Initialize(HWND window, int width, int height)
     m_timer.SetFixedTimeStep(true);
     m_timer.SetTargetElapsedSeconds(1.0 / 60);
     */
+	InputSystem::GetInstance()->SetMouseWindow(window);
 }
 
 #pragma region Frame Update
@@ -60,6 +62,7 @@ void Game::Update(DX::StepTimer const& timer)
     // TODO: Add your game logic here.
 	elapsedTime;
 	ObjectSystem::GetInstance()->Update();
+	InputSystem::GetInstance()->Update();
 	PhysicSystem::GetInstance()->Update(elapsedTime);
 }
 #pragma endregion
@@ -174,6 +177,8 @@ void Game::CreateDeviceDependentResources()
 	//Systems initialize
 	//ObjectFactory
 	ObjectSystem::GetInstance()->Initialize();
+	//Input
+	InputSystem::GetInstance()->Initialize();
 	//Physics
 	PhysicSystem::GetInstance()->Initialize(device, deviceContext);
 	//Graphics
@@ -186,6 +191,7 @@ void Game::CreateWindowSizeDependentResources()
 	D3D11_VIEWPORT screenViewport = m_deviceResources.get()->GetScreenViewport();
     // TODO: Initialize windows-size dependent objects here.
 	ObjectSystem::GetInstance()->InitWindow();
+	InputSystem::GetInstance()->InitWindow();
 	PhysicSystem::GetInstance()->InitWindow();
 	GraphicSystem::GetInstance()->InitWindow(screenViewport);
 }
@@ -194,6 +200,7 @@ void Game::OnDeviceLost()
 {
     // TODO: Add Direct3D resource cleanup here.
 	ObjectSystem::GetInstance()->Reset();
+	InputSystem::GetInstance()->Reset();
 	PhysicSystem::GetInstance()->Reset();
 	GraphicSystem::GetInstance()->Reset();
 }

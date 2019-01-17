@@ -25,6 +25,9 @@ PhysicSystem::PhysicSystem()
 	m_gravity = Vector3 ( 0, -9.8f, 0 );
 	m_minDt = 1.0f / 60.0f;
 	m_accumulator = 0;
+
+	m_AABBCulling = false;
+
 }
 //Destructor
 PhysicSystem::~PhysicSystem()
@@ -97,7 +100,6 @@ void PhysicSystem::UpdatePhysics(float dt) {
 	for (unsigned int i = 0; i < m_collidingPairs.size(); i++) {
 		NarrowPhase(m_collidingPairs[i].first, m_collidingPairs[i].second);
 	}
-
 }
 bool PhysicSystem::NarrowPhase(RigidbodyComponent * rb1, RigidbodyComponent * rb2) {
 
@@ -163,36 +165,42 @@ bool PhysicSystem::NarrowPhase(RigidbodyComponent * rb1, RigidbodyComponent * rb
 }
 
 bool PhysicSystem::BroadPhase(RigidbodyComponent * rb1, RigidbodyComponent * rb2) {
+	//Check different approaches as booleans
+
 	//@Compute AABBs
-	Sphere * sphere1 = dynamic_cast<Sphere*>(rb1->m_shape);
-	Sphere * sphere2 = dynamic_cast<Sphere*>(rb2->m_shape);
-	TransformComponent * t1 = &rb1->m_owner->m_transform;
-	TransformComponent * t2 = &rb2->m_owner->m_transform;
+	if (m_AABBCulling) {
+		Sphere * sphere1 = dynamic_cast<Sphere*>(rb1->m_shape);
+		Sphere * sphere2 = dynamic_cast<Sphere*>(rb2->m_shape);
+		TransformComponent * t1 = &rb1->m_owner->m_transform;
+		TransformComponent * t2 = &rb2->m_owner->m_transform;
 
-	AABB box1 = sphere1->ComputeAABB();
-	box1.m_minExtent += t1->m_position;
-	box1.m_maxExtent += t1->m_position;
+		AABB box1 = sphere1->ComputeAABB();
+		box1.m_minExtent += t1->m_position;
+		box1.m_maxExtent += t1->m_position;
 
-	AABB box2 = sphere2->ComputeAABB();
-	box2.m_minExtent += t2->m_position;
-	box2.m_maxExtent += t1->m_position;
-	
-	//Define bounds
-	float thisRight = box1.m_maxExtent.x; float otherRight = box2.m_maxExtent.x;
-	float thisLeft = box1.m_minExtent.x; float otherLeft = box2.m_minExtent.x;
-	float thisTop = box1.m_maxExtent.y; float otherTop = box2.m_maxExtent.y;
-	float thisBottom = box1.m_minExtent.y; float otherBottom = box2.m_minExtent.y;
-	float thisFront = box1.m_maxExtent.z; float otherFront = box2.m_maxExtent.z;
-	float thisBack = box1.m_minExtent.z; float otherBack = box2.m_minExtent.z;
+		AABB box2 = sphere2->ComputeAABB();
+		box2.m_minExtent += t2->m_position;
+		box2.m_maxExtent += t1->m_position;
 
-	return (!(
-		thisRight < otherLeft
-		|| thisLeft > otherRight
-		|| thisTop < otherBottom
-		|| thisBottom > otherTop
-		|| thisFront < otherBack
-		|| thisBack > otherFront
-		)
-		);
+		//Define bounds
+		float thisRight = box1.m_maxExtent.x; float otherRight = box2.m_maxExtent.x;
+		float thisLeft = box1.m_minExtent.x; float otherLeft = box2.m_minExtent.x;
+		float thisTop = box1.m_maxExtent.y; float otherTop = box2.m_maxExtent.y;
+		float thisBottom = box1.m_minExtent.y; float otherBottom = box2.m_minExtent.y;
+		float thisFront = box1.m_maxExtent.z; float otherFront = box2.m_maxExtent.z;
+		float thisBack = box1.m_minExtent.z; float otherBack = box2.m_minExtent.z;
 
+		return (!(
+			thisRight < otherLeft
+			|| thisLeft > otherRight
+			|| thisTop < otherBottom
+			|| thisBottom > otherTop
+			|| thisFront < otherBack
+			|| thisBack > otherFront
+			)
+			);
+	}
+
+	//Default: if BroadPhase is disabled
+	return true;
 }

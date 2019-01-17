@@ -126,7 +126,7 @@ void ObjectSystem::LoadScene1()
 
 	//Sphere bounds?
 	GameObject * mySphereBound = AddObject("SphereBound", Vector3(0, -10, 15.f));
-	mySphereBound->AddComponent(new RigidbodyComponent(10.f, 9999.f, true));
+	mySphereBound->AddComponent(new RigidbodyComponent(10.f, 999999.f, true));
 
 
 }

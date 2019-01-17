@@ -54,6 +54,9 @@
     <ClInclude Include="Headers\Sphere.h">
       <Filter>Headers</Filter>
     </ClInclude>
+    <ClInclude Include="Headers\InputSystem.h">
+      <Filter>Headers</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="pch.cpp" />
@@ -90,6 +93,9 @@
       <Filter>Sources</Filter>
     </ClCompile>
     <ClCompile Include="Sources\Sphere.cpp">
+      <Filter>Sources</Filter>
+    </ClCompile>
+    <ClCompile Include="Sources\InputSystem.cpp">
       <Filter>Sources</Filter>
     </ClCompile>
   </ItemGroup>

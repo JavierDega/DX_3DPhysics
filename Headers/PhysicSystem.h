@@ -39,5 +39,13 @@ public:
 	float m_minDt;
 	float m_accumulator;
 
+	//Algorithms
+	//Space subdivision
+	//BroadPhase
+	bool m_AABBCulling;
+	//Medium phase
+
+
+
 };
 #endif /*PHYSICSYSTEM_H_*/

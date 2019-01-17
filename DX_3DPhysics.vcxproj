@@ -161,6 +161,7 @@
     <ClInclude Include="Headers\Component.h" />
     <ClInclude Include="Headers\GameObject.h" />
     <ClInclude Include="Headers\GraphicSystem.h" />
+    <ClInclude Include="Headers\InputSystem.h" />
     <ClInclude Include="Headers\ObjectSystem.h" />
     <ClInclude Include="Headers\PhysicSystem.h" />
     <ClInclude Include="Headers\RigidbodyComponent.h" />
@@ -184,6 +185,7 @@
     <ClCompile Include="Sources\Component.cpp" />
     <ClCompile Include="Sources\GameObject.cpp" />
     <ClCompile Include="Sources\GraphicSystem.cpp" />
+    <ClCompile Include="Sources\InputSystem.cpp" />
     <ClCompile Include="Sources\ObjectSystem.cpp" />
     <ClCompile Include="Sources\PhysicSystem.cpp" />
     <ClCompile Include="Sources\RigidbodyComponent.cpp" />
