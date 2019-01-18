@@ -45,7 +45,5 @@ public:
 	bool m_AABBCulling;
 	//Medium phase
 
-
-
 };
 #endif /*PHYSICSYSTEM_H_*/

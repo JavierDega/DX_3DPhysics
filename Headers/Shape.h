@@ -16,7 +16,7 @@ public:
 	virtual AABB ComputeAABB() = 0;
 
 	//Variables
-	//DirectX::SimpleMath::Vector3 m_center;
+	DirectX::SimpleMath::Vector3 m_center;
 	std::unique_ptr<DirectX::GeometricPrimitive> m_primitive;
 };
 #endif /*SHAPE_H_*/

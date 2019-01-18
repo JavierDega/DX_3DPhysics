@@ -27,7 +27,6 @@ PhysicSystem::PhysicSystem()
 	m_accumulator = 0;
 
 	m_AABBCulling = false;
-
 }
 //Destructor
 PhysicSystem::~PhysicSystem()
