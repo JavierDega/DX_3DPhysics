@@ -35,6 +35,7 @@ public:
 
 	//Variables
 	DirectX::SimpleMath::Vector3 m_gravity;
+	float m_airViscosity;
 	//Timestep
 	float m_minDt;
 	float m_accumulator;

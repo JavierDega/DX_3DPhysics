@@ -23,6 +23,8 @@ PhysicSystem * PhysicSystem::GetInstance()
 PhysicSystem::PhysicSystem()
 {
 	m_gravity = Vector3 ( 0, -9.8f, 0 );
+	//Viscosity for earth's air @  0'Celsius = 1.33*10^-5 kg/ms^2
+	m_airViscosity = 0.5f;
 	m_minDt = 1.0f / 60.0f;
 	m_accumulator = 0;
 
@@ -84,9 +86,11 @@ void PhysicSystem::UpdatePhysics(float dt) {
 			currentRb->m_velocity = Vector3::Zero;
 		}
 		else {
+			currentRb->m_force -= m_airViscosity*currentRb->m_velocity;
 			currentRb->m_force += m_gravity;
 			currentRb->m_acceleration = currentRb->m_force / currentRb->m_mass;
 			currentRb->m_velocity += currentRb->m_acceleration*dt;
+			
 			currentRb->m_owner->m_transform.m_position += currentRb->m_velocity*dt;
 			//Forces are computed every frame
 			currentRb->m_force = Vector3(0, 0, 0);

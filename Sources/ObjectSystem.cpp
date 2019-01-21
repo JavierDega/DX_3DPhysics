@@ -110,13 +110,31 @@ vector< RigidbodyComponent * > ObjectSystem::GetRigidbodyComponentList() {
 
 void ObjectSystem::LoadScene1()
 {
+	//@Same bug as Wii, dynamic allocation
 	//Create some spheres
-	GameObject * mySphere = AddObject( "Sphere", Vector3( -0.5, 7.0f, 5.f ));
+	GameObject * mySphere = AddObject( "Sphere", Vector3( -0.5, 10.0f, 5.f ));
 	mySphere->AddComponent(new RigidbodyComponent( 0.5f, 1.0f, false, Colors::Red ));
 
-	//@Same bug as Wii, dynamic allocation
-	GameObject * mySphere2 = AddObject("Sphere2", Vector3( 0.5, 7.0f, 5.f ));
+	GameObject * mySphere2 = AddObject("Sphere2", Vector3( 0.5, 10.0f, 5.f ));
 	mySphere2->AddComponent(new RigidbodyComponent( 0.5f, 1.f, false, Colors::Red ));
+
+	GameObject * mySphere3 = AddObject("Sphere3", Vector3(-0.5, 10.0f, 10.f));
+	mySphere3->AddComponent(new RigidbodyComponent(0.5f, 1.0f, false, Colors::Red));
+
+	GameObject * mySphere4 = AddObject("Sphere4", Vector3(0.5, 10.0f, 10.f));
+	mySphere4->AddComponent(new RigidbodyComponent(0.5f, 1.f, false, Colors::Red));
+
+	GameObject * mySphere5 = AddObject("Sphere5", Vector3(-0.5, 10.0f, 15.f));
+	mySphere5->AddComponent(new RigidbodyComponent(0.5f, 1.0f, false, Colors::Red));
+
+	GameObject * mySphere6 = AddObject("Sphere6", Vector3(0.5, 10.0f, 15.f));
+	mySphere6->AddComponent(new RigidbodyComponent(0.5f, 1.f, false, Colors::Red));
+
+	GameObject * mySphere7 = AddObject("Sphere7", Vector3(-0.5, 10.0f, 0.f));
+	mySphere7->AddComponent(new RigidbodyComponent(0.5f, 1.0f, false, Colors::Red));
+
+	GameObject * mySphere8 = AddObject("Sphere8", Vector3(0.5, 10.0f, 0.f));
+	mySphere8->AddComponent(new RigidbodyComponent(0.5f, 1.f, false, Colors::Red));
 
 	///SPHERE BOUNDS
 	//Mid bottom
