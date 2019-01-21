@@ -43,6 +43,10 @@ void GraphicSystem::Initialize(ID3D11Device1* device, ID3D11DeviceContext1 * dev
 		Sphere * theSphere = dynamic_cast<Sphere*>(rigidbodies[i]->m_shape);
 		if (theSphere) {
 			theSphere->m_primitive = GeometricPrimitive::CreateSphere(deviceContext, theSphere->m_radius * 2);
+			//@
+			theSphere->ComputeAABB();
+			Vector3 AABBSize = theSphere->m_AABB.m_maxExtent - theSphere->m_AABB.m_minExtent;
+			theSphere->m_AABBPrimitive = GeometricPrimitive::CreateBox(deviceContext, AABBSize);
 		}
 	}
 }
@@ -76,6 +80,12 @@ void GraphicSystem::Update(float dt) {
 
 		Matrix m_world = Matrix::CreateTranslation(currentTransform.m_position);
 		currentRb->m_shape->m_primitive->Draw( m_world, m_view, m_proj, currentRb->m_shape->m_color );
+
+		//@Debug draw (Wireframes)
+		if (ps->m_AABBCulling) {
+			//If its enabled, the PhysicsSystem, should of have computed, and updated, the AABB
+			currentRb->m_shape->m_AABBPrimitive->Draw(m_world, m_view, m_proj, Colors::Red, nullptr, true);
+		}
 	}
 
 }

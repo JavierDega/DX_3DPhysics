@@ -77,13 +77,20 @@ void PhysicSystem::UpdatePhysics(float dt) {
 
 	for (unsigned int i = 0; i < m_rigidbodies.size(); i++) {
 		RigidbodyComponent* currentRb = m_rigidbodies[i];
-		//Kinematics
-		currentRb->m_force += m_gravity;
-		currentRb->m_acceleration = currentRb->m_force / currentRb->m_mass;
-		currentRb->m_velocity += currentRb->m_acceleration*dt;
-		currentRb->m_owner->m_transform.m_position += currentRb->m_velocity*dt;
-		//Forces are computed every frame
-		currentRb->m_force = Vector3(0, 0, 0);
+		//Integration
+		if (currentRb->m_isKinematic) {
+			currentRb->m_force = Vector3::Zero;
+			currentRb->m_acceleration = Vector3::Zero;
+			currentRb->m_velocity = Vector3::Zero;
+		}
+		else {
+			currentRb->m_force += m_gravity;
+			currentRb->m_acceleration = currentRb->m_force / currentRb->m_mass;
+			currentRb->m_velocity += currentRb->m_acceleration*dt;
+			currentRb->m_owner->m_transform.m_position += currentRb->m_velocity*dt;
+			//Forces are computed every frame
+			currentRb->m_force = Vector3(0, 0, 0);
+		}
 
 		//SSScheme
 		//BroadPhase
@@ -101,6 +108,8 @@ void PhysicSystem::UpdatePhysics(float dt) {
 	}
 }
 bool PhysicSystem::NarrowPhase(RigidbodyComponent * rb1, RigidbodyComponent * rb2) {
+
+	if (rb1->m_isKinematic && rb2->m_isKinematic) return false;
 
 	Sphere * sphere1 = dynamic_cast<Sphere*>(rb1->m_shape);
 	Sphere * sphere2 = dynamic_cast<Sphere*>(rb2->m_shape);
@@ -125,9 +134,9 @@ bool PhysicSystem::NarrowPhase(RigidbodyComponent * rb1, RigidbodyComponent * rb
 		//@Static collision resolution based on speed
 		float v1Length = rb1->m_velocity.Length();
 		float v2Length = rb2->m_velocity.Length();
+		//@What if two objects with no velocity just collided?
 		float v1Ratio = v1Length / (v1Length + v2Length);
 		float v2Ratio = v2Length / (v1Length + v2Length);
-
 		t1->m_position -= v1Ratio * overlap * (t1->m_position - t2->m_position) / dist;
 		t2->m_position += v2Ratio * overlap * (t1->m_position - t2->m_position) / dist;
 		
@@ -159,8 +168,9 @@ bool PhysicSystem::NarrowPhase(RigidbodyComponent * rb1, RigidbodyComponent * rb
 		// v2' = v2 + optimizedP * m1 * n
 		rb2->m_velocity = rb2->m_velocity + optimizedP * rb1->m_mass * normal;
 
+		return true;
 	}
-	return true;
+	return false;
 }
 
 bool PhysicSystem::BroadPhase(RigidbodyComponent * rb1, RigidbodyComponent * rb2) {
@@ -168,6 +178,7 @@ bool PhysicSystem::BroadPhase(RigidbodyComponent * rb1, RigidbodyComponent * rb2
 
 	//@Compute AABBs
 	if (m_AABBCulling) {
+		//@We assume shapes as spheres
 		Sphere * sphere1 = dynamic_cast<Sphere*>(rb1->m_shape);
 		Sphere * sphere2 = dynamic_cast<Sphere*>(rb2->m_shape);
 		TransformComponent * t1 = &rb1->m_owner->m_transform;

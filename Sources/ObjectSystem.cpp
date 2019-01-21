@@ -111,15 +111,50 @@ vector< RigidbodyComponent * > ObjectSystem::GetRigidbodyComponentList() {
 void ObjectSystem::LoadScene1()
 {
 	//Create some spheres
-	GameObject * mySphere = AddObject( "Sphere", Vector3( -0.5, 7.0f, 15.f ));
-	mySphere->AddComponent(new RigidbodyComponent( 0.5f, 10.0f, false, Colors::Red ));
+	GameObject * mySphere = AddObject( "Sphere", Vector3( -0.5, 7.0f, 5.f ));
+	mySphere->AddComponent(new RigidbodyComponent( 0.5f, 1.0f, false, Colors::Red ));
 
 	//@Same bug as Wii, dynamic allocation
-	GameObject * mySphere2 = AddObject("Sphere2", Vector3( 0.5, 7.0f, 15.f ));
-	mySphere2->AddComponent(new RigidbodyComponent( 0.5f, 10.f, false, Colors::Red ));
+	GameObject * mySphere2 = AddObject("Sphere2", Vector3( 0.5, 7.0f, 5.f ));
+	mySphere2->AddComponent(new RigidbodyComponent( 0.5f, 1.f, false, Colors::Red ));
 
-	//Sphere bounds?
-	GameObject * mySphereBound = AddObject("SphereBound", Vector3( 0, 0, 15.f ));
-	mySphereBound->AddComponent(new RigidbodyComponent( 5.f, 1000.f, true ));
+	///SPHERE BOUNDS
+	//Mid bottom
+	GameObject * mySphereBound = AddObject("SphereBound", Vector3( 0, -10.f, 5.f ));
+	mySphereBound->AddComponent(new RigidbodyComponent( 10.f, 1000.f, true ));
+
+	GameObject * mySphereBound2 = AddObject("SphereBound2", Vector3(-15.5f, 0.f, 5.f));
+	mySphereBound2->AddComponent(new RigidbodyComponent(10.f, 1000.f, true));
+
+	GameObject * mySphereBound3 = AddObject("SphereBound3", Vector3(15.5f, 0.f, 5.f));
+	mySphereBound3->AddComponent(new RigidbodyComponent(10.f, 1000.f, true));
+
+	//Front bottom
+	GameObject * mySphereBound4 = AddObject("SphereBound4", Vector3(0, -10.f, -5.f));
+	mySphereBound4->AddComponent(new RigidbodyComponent(10.f, 1000.f, true));
+
+	GameObject * mySphereBound5 = AddObject("SphereBound5", Vector3(-15.5f, 0.f, -5.f));
+	mySphereBound5->AddComponent(new RigidbodyComponent(10.f, 1000.f, true));
+
+	GameObject * mySphereBound6 = AddObject("SphereBound6", Vector3(15.5f, 0.f, -5.f));
+	mySphereBound6->AddComponent(new RigidbodyComponent(10.f, 1000.f, true));
+
+	//Back bottom
+	GameObject * mySphereBound7 = AddObject("SphereBound7", Vector3(0, -10.f, 15.f));
+	mySphereBound7->AddComponent(new RigidbodyComponent(10.f, 1000.f, true));
+
+	GameObject * mySphereBound8 = AddObject("SphereBound8", Vector3(-15.5f, 0.f, 15.f));
+	mySphereBound8->AddComponent(new RigidbodyComponent(10.f, 1000.f, true));
+
+	GameObject * mySphereBound9 = AddObject("SphereBound9", Vector3(15.5f, 0.f, 15.f));
+	mySphereBound9->AddComponent(new RigidbodyComponent(10.f, 1000.f, true));
+
+	//Back and front
+	GameObject * mySphereBound10 = AddObject("SphereBound10", Vector3( 0, 0.f, 25.f));
+	mySphereBound10->AddComponent(new RigidbodyComponent(10.f, 1000.f, true));
+
+	GameObject * mySphereBound11 = AddObject("SphereBound11", Vector3( 0, 0.f, -15.f));
+	mySphereBound11->AddComponent(new RigidbodyComponent(10.f, 1000.f, true));
+
 
 }

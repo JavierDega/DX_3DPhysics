@@ -18,6 +18,7 @@ public:
 	//Variables
 	DirectX::SimpleMath::Color m_color;
 	std::unique_ptr<DirectX::GeometricPrimitive> m_primitive;
-	std::unique_ptr<DirectX::GeometricPrimitive> m_boundingAABB;
+	std::unique_ptr<DirectX::GeometricPrimitive> m_AABBPrimitive;
+	AABB m_AABB;
 };
 #endif /*SHAPE_H_*/
