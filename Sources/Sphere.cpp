@@ -5,8 +5,8 @@
 using namespace DirectX;
 using namespace SimpleMath;
 
-Sphere::Sphere(float radius)
-	: m_radius(radius)
+Sphere::Sphere(float radius, XMVECTOR color)
+	: m_radius(radius), Shape(color)
 {
 
 }

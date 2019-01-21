@@ -10,13 +10,14 @@ struct AABB {
 class Shape
 {
 public:
-	Shape();
+	Shape(DirectX::XMVECTOR color = DirectX::Colors::White);
 	virtual ~Shape();
 	//Funcs
 	virtual AABB ComputeAABB() = 0;
 
 	//Variables
-	DirectX::SimpleMath::Vector3 m_center;
+	DirectX::SimpleMath::Color m_color;
 	std::unique_ptr<DirectX::GeometricPrimitive> m_primitive;
+	std::unique_ptr<DirectX::GeometricPrimitive> m_boundingAABB;
 };
 #endif /*SHAPE_H_*/

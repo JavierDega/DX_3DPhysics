@@ -59,7 +59,7 @@ void InputSystem::Update(float dt)
 	auto mouse = m_mouse->GetState();
 	if (mouse.positionMode == Mouse::MODE_RELATIVE)
 	{
-		Vector3 delta = Vector3(float(mouse.x), float(mouse.y), 0.f) * 0.01f;
+		Vector3 delta = Vector3(float(mouse.x), float(mouse.y), 0.f) * dt;
 		*m_pitch -= delta.y;
 		*m_yaw -= delta.x;
 		// limit pitch to straight up or straight down
@@ -91,7 +91,7 @@ void InputSystem::Update(float dt)
 	relativeRight.Normalize();
 	Vector3 relativeUp = relativeRight.Cross(relativeForward);
 	//@Does this need to be done?
-	//relativeUp.Normalize();
+	relativeUp.Normalize();
 
 	//Forward
 	if (kb.W) {

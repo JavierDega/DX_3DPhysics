@@ -42,7 +42,7 @@ void GraphicSystem::Initialize(ID3D11Device1* device, ID3D11DeviceContext1 * dev
 		//Dynamic cast
 		Sphere * theSphere = dynamic_cast<Sphere*>(rigidbodies[i]->m_shape);
 		if (theSphere) {
-			theSphere->m_primitive = GeometricPrimitive::CreateSphere(deviceContext,theSphere->m_radius * 2);
+			theSphere->m_primitive = GeometricPrimitive::CreateSphere(deviceContext, theSphere->m_radius * 2);
 		}
 	}
 }
@@ -75,7 +75,7 @@ void GraphicSystem::Update(float dt) {
 		TransformComponent currentTransform = currentRb->m_owner->m_transform;
 
 		Matrix m_world = Matrix::CreateTranslation(currentTransform.m_position);
-		currentRb->m_shape->m_primitive->Draw( m_world, m_view, m_proj );
+		currentRb->m_shape->m_primitive->Draw( m_world, m_view, m_proj, currentRb->m_shape->m_color );
 	}
 
 }

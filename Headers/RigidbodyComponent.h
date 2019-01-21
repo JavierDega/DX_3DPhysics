@@ -10,7 +10,7 @@ class RigidbodyComponent :
 public:
 	//Funcs
 	//Sphere constructor
-	RigidbodyComponent(float radius = 0.5f, float mass = 100.0f, bool m_isKinematic = false);
+	RigidbodyComponent(float radius = 0.5f, float mass = 10.0f, bool m_isKinematic = false, DirectX::XMVECTOR color = DirectX::Colors::White);
 	virtual ~RigidbodyComponent();
 	//Messaging
 	virtual bool Receive(ComponentMessage msg);

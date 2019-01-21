@@ -1,7 +1,10 @@
 #include "pch.h"
 #include "..\Headers\Shape.h"
 
-Shape::Shape()
+using namespace DirectX;
+
+Shape::Shape(XMVECTOR Color)
+	: m_color(Color)
 {
 }
 

@@ -111,22 +111,15 @@ vector< RigidbodyComponent * > ObjectSystem::GetRigidbodyComponentList() {
 void ObjectSystem::LoadScene1()
 {
 	//Create some spheres
-	GameObject * mySphere = AddObject( "Sphere", Vector3( -2, 0, 9.5f));
-	RigidbodyComponent * rb1 = new RigidbodyComponent();
-	//rb1->m_force = Vector3(500.0f, 0.0f, 0.0f);
-	mySphere->AddComponent(rb1);
+	GameObject * mySphere = AddObject( "Sphere", Vector3( -0.5, 7.0f, 15.f ));
+	mySphere->AddComponent(new RigidbodyComponent( 0.5f, 10.0f, false, Colors::Red ));
 
 	//@Same bug as Wii, dynamic allocation
-	GameObject * mySphere2 = AddObject("Sphere2", Vector3(2, 0, 10.0f));
-	RigidbodyComponent * rb2 = new RigidbodyComponent();
-	//rb2->m_force = Vector3(-500.0f, 0.0f, 0.0f);
-	mySphere2->AddComponent(rb2);
-
-
+	GameObject * mySphere2 = AddObject("Sphere2", Vector3( 0.5, 7.0f, 15.f ));
+	mySphere2->AddComponent(new RigidbodyComponent( 0.5f, 10.f, false, Colors::Red ));
 
 	//Sphere bounds?
-	GameObject * mySphereBound = AddObject("SphereBound", Vector3(0, -10, 15.f));
-	mySphereBound->AddComponent(new RigidbodyComponent(10.f, 999999.f, true));
-
+	GameObject * mySphereBound = AddObject("SphereBound", Vector3( 0, 0, 15.f ));
+	mySphereBound->AddComponent(new RigidbodyComponent( 5.f, 1000.f, true ));
 
 }

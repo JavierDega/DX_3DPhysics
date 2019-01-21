@@ -62,7 +62,7 @@ void Game::Update(DX::StepTimer const& timer)
     // TODO: Add your game logic here.
 	elapsedTime;
 	ObjectSystem::GetInstance()->Update();
-	InputSystem::GetInstance()->Update();
+	InputSystem::GetInstance()->Update(elapsedTime);
 	PhysicSystem::GetInstance()->Update(elapsedTime);
 }
 #pragma endregion

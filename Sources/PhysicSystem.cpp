@@ -26,7 +26,7 @@ PhysicSystem::PhysicSystem()
 	m_minDt = 1.0f / 60.0f;
 	m_accumulator = 0;
 
-	m_AABBCulling = false;
+	m_AABBCulling = true;
 }
 //Destructor
 PhysicSystem::~PhysicSystem()
@@ -80,7 +80,7 @@ void PhysicSystem::UpdatePhysics(float dt) {
 		//Kinematics
 		currentRb->m_force += m_gravity;
 		currentRb->m_acceleration = currentRb->m_force / currentRb->m_mass;
-		currentRb->m_velocity += currentRb->m_acceleration;
+		currentRb->m_velocity += currentRb->m_acceleration*dt;
 		currentRb->m_owner->m_transform.m_position += currentRb->m_velocity*dt;
 		//Forces are computed every frame
 		currentRb->m_force = Vector3(0, 0, 0);
@@ -110,26 +110,26 @@ bool PhysicSystem::NarrowPhase(RigidbodyComponent * rb1, RigidbodyComponent * rb
 	//Resting contact, moving contact, contact vs kinematic
 	//@Impulse based collision response
 
-	//@Are they colliding?
+	//@1:Are they colliding?
 	float distSq = Vector3::DistanceSquared(t1->m_position, t2->m_position);
-
 	// Calculate the sum of the radii, then square it
 	float sumRadiiSq = sphere1->m_radius + sphere2->m_radius;
 	sumRadiiSq *= sumRadiiSq;
-
 	if (distSq <= sumRadiiSq) {
 		// A and B are touching
 		//@Impulse based collision resolution
-
 		///1:Displacement
-		//Cases? Both moving, one of them kinematic/sleeping and the other one moving
-		//@Static collision resolution based on speed?
-		//float ratio = rb1->m_velocity.Length / rb2->m_velocity.Length;
+		//Calculate overlap
 		float dist = sqrtf(distSq);
-		float overlap = 0.5f * (dist - sphere1->m_radius - sphere2->m_radius);
+		float overlap = (dist - sphere1->m_radius - sphere2->m_radius);
+		//@Static collision resolution based on speed
+		float v1Length = rb1->m_velocity.Length();
+		float v2Length = rb2->m_velocity.Length();
+		float v1Ratio = v1Length / (v1Length + v2Length);
+		float v2Ratio = v2Length / (v1Length + v2Length);
 
-		t1->m_position -= overlap * (t1->m_position - t2->m_position) / dist;
-		t2->m_position -= overlap * (t1->m_position - t2->m_position) / dist;
+		t1->m_position -= v1Ratio * overlap * (t1->m_position - t2->m_position) / dist;
+		t2->m_position += v2Ratio * overlap * (t1->m_position - t2->m_position) / dist;
 		
 		///2:Dynamic resolution
 		//http://www.gamasutra.com/view/feature/131424/pool_hall_lessons_fast_accurate_.php?page=3
@@ -179,7 +179,7 @@ bool PhysicSystem::BroadPhase(RigidbodyComponent * rb1, RigidbodyComponent * rb2
 
 		AABB box2 = sphere2->ComputeAABB();
 		box2.m_minExtent += t2->m_position;
-		box2.m_maxExtent += t1->m_position;
+		box2.m_maxExtent += t2->m_position;
 
 		//Define bounds
 		float thisRight = box1.m_maxExtent.x; float otherRight = box2.m_maxExtent.x;
