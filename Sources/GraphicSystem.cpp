@@ -22,10 +22,9 @@ GraphicSystem * GraphicSystem::GetInstance()
 }
 
 //Constructor
-GraphicSystem::GraphicSystem() {
-	m_cam = { 0.0F, 0.0F, 0.0F };
-	m_up = { 0.0F, 1.0F, 0.0F };
-	m_look = { 0.0F, 0.0F, 1.0F };
+GraphicSystem::GraphicSystem() 
+	: m_pitch(0), m_yaw(0), m_cam(Vector3::Zero), m_look(Vector3::Forward)
+{
 }
 //Destructor (Singleton so..?)
 GraphicSystem::~GraphicSystem() {
@@ -49,7 +48,7 @@ void GraphicSystem::Initialize(ID3D11Device1* device, ID3D11DeviceContext1 * dev
 }
 void GraphicSystem::InitWindow(D3D11_VIEWPORT screenViewport)
 {
-	m_view = Matrix::CreateLookAt(m_cam, m_look, m_up);
+	//@Projection recreated everytime we resize window
 	m_proj = Matrix::CreatePerspectiveFieldOfView(XM_PI / 4.f,
 		screenViewport.Width/screenViewport.Height, 0.1f, 100.f);
 }
@@ -59,8 +58,14 @@ void GraphicSystem::Update(float dt) {
 	ObjectSystem * os = ObjectSystem::GetInstance();
 	PhysicSystem * ps = PhysicSystem::GetInstance();
 
+	float y = sinf(m_pitch);
+	float r = cosf(m_pitch);
+	float z = r * cosf(m_yaw);
+	float x = r * sinf(m_yaw);
+
+	m_look = m_cam + Vector3(x, y, z);
 	//Cam look at
-	m_view = Matrix::CreateLookAt(m_cam, m_look, m_up);
+	m_view = Matrix::CreateLookAt(m_cam, m_look, Vector3::Up);
 	//Render
 	vector<RigidbodyComponent*> rigidbodies = os->GetRigidbodyComponentList();
 

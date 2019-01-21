@@ -28,7 +28,8 @@ public:
 	//@Logic components point to these variables
 	DirectX::SimpleMath::Vector3 * m_cam;
 	DirectX::SimpleMath::Vector3 * m_look;
-	float m_pitch, m_yaw;
+	float *m_pitch;
+	float *m_yaw;
 	std::unique_ptr<DirectX::Keyboard> m_keyboard;
 	std::unique_ptr<DirectX::Mouse> m_mouse;
 

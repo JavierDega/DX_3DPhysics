@@ -31,7 +31,10 @@ public:
 	//Matrices - Coordinate spaces
 	DirectX::SimpleMath::Matrix m_view;
 	DirectX::SimpleMath::Matrix m_proj;
-	DirectX::SimpleMath::Vector3 m_cam, m_up, m_look;
+	//Camera
+	DirectX::SimpleMath::Vector3 m_cam;
+	DirectX::SimpleMath::Vector3 m_look;
+	float m_pitch, m_yaw;
 };
 
 #endif /*GRAPHICSYSTEM_H_*/
