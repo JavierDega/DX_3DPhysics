@@ -31,7 +31,9 @@ public:
 	float *m_pitch;
 	float *m_yaw;
 	std::unique_ptr<DirectX::Keyboard> m_keyboard;
+	DirectX::Keyboard::KeyboardStateTracker m_keyboardTracker;
 	std::unique_ptr<DirectX::Mouse> m_mouse;
+	DirectX::Mouse::ButtonStateTracker m_mouseTracker;
 
 };
 #endif /*INPUTSYSTEM_H_*/

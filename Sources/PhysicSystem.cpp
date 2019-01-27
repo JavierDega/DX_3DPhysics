@@ -24,34 +24,39 @@ PhysicSystem::PhysicSystem()
 {
 	m_gravity = Vector3 ( 0, -9.8f, 0 );
 	//Viscosity for earth's air @  0'Celsius = 1.33*10^-5 kg/ms^2
-	m_airViscosity = 0.5f;
+	m_airViscosity = 0.133f;
 	m_minDt = 1.0f / 60.0f;
 	m_accumulator = 0;
 
-	m_AABBCulling = true;
+	m_AABBCulling.isEnabled = true;
 }
 //Destructor
 PhysicSystem::~PhysicSystem()
 {
-}
 
+}
+///Init
 void PhysicSystem::Initialize(ID3D11Device1 * device, ID3D11DeviceContext1 * deviceContext)
 {
 	//@What do here?
 }
-
+///Init window
 void PhysicSystem::InitWindow(D3D11_VIEWPORT screenViewport)
 {
 	//@What do here?
 }
-
+///Timestep and run physics
 void PhysicSystem::Update(float dt)
 {
+	//@Update settings text
+	m_fps = to_wstring(1 / dt);
+	m_AABBCulling.log = m_AABBCulling.isEnabled ? L"Press F1 to disable AABB culling" : L"Press F1 to enable AABB culling";
+
+	//@Timestep
 	//https://gamedevelopment.tutsplus.com/tutorials/how-to-create-a-custom-2d-physics-engine-the-core-engine--gamedev-7493
-	//@Timestep, advance physics, run all algorithm classes
 	m_accumulator += dt;
 
-	// Avoid spiral of death and clamp dt, thus clamping
+	// @Avoid spiral of death and clamp dt, thus clamping
 	// how many times the UpdatePhysics can be called in
 	// a single game loop.
 	if (m_accumulator > 0.2f) m_accumulator = 0.2f;
@@ -61,56 +66,117 @@ void PhysicSystem::Update(float dt)
 		m_accumulator -= m_minDt;
 	}
 
-	//To create a lerp between this frame and the next, interact with the graphic system.
+	//@To create a lerp between this frame and the next, interact with the graphic system.
 	//ApproxTransform.position = transform.position + m_velocity*m_accumulator ?
 	float alpha = m_accumulator / m_minDt;
 
 }
-
+///Reset
 void PhysicSystem::Reset()
 {
 	//@What do here?
 }
-//Physics Update
+///Utility
+///Physics loop
 void PhysicSystem::UpdatePhysics(float dt) {
 	vector<RigidbodyComponent*> m_rigidbodies = ObjectSystem::GetInstance()->GetRigidbodyComponentList();
-
 	vector<pair<RigidbodyComponent*, RigidbodyComponent*>> m_collidingPairs;
 
+	//@Clear debug colors
+	for (RigidbodyComponent* rb : m_rigidbodies){
+		rb->m_shape->m_AABBColor = Colors::Red;
+	}	
+
+	//@First loop: Integration + First culling algorithm
 	for (unsigned int i = 0; i < m_rigidbodies.size(); i++) {
 		RigidbodyComponent* currentRb = m_rigidbodies[i];
-		//Integration
+		//@Integration
 		if (currentRb->m_isKinematic) {
-			currentRb->m_force = Vector3::Zero;
 			currentRb->m_acceleration = Vector3::Zero;
 			currentRb->m_velocity = Vector3::Zero;
 		}
-		else {
-			currentRb->m_force -= m_airViscosity*currentRb->m_velocity;
+		else
+		{
+			currentRb->m_force -= m_airViscosity * currentRb->m_velocity;
 			currentRb->m_force += m_gravity;
 			currentRb->m_acceleration = currentRb->m_force / currentRb->m_mass;
 			currentRb->m_velocity += currentRb->m_acceleration*dt;
-			
 			currentRb->m_owner->m_transform.m_position += currentRb->m_velocity*dt;
-			//Forces are computed every frame
-			currentRb->m_force = Vector3(0, 0, 0);
 		}
+		//Forces are computed every frame
+		currentRb->m_force = Vector3(0, 0, 0);
 
-		//SSScheme
-		//BroadPhase
+		//@SSScheme
+
+		//@BroadPhase
 		for (unsigned int j = i + 1; j < m_rigidbodies.size(); j++) {
 			//@To avoid double checks, we only check upwards
 			if(BroadPhase(currentRb, m_rigidbodies[j])) m_collidingPairs.push_back(make_pair(currentRb, m_rigidbodies[j]));
 		}
 	}
 
-	//Medium Phase
+	//@Start nulling out collider pairs
+	
+	//@Medium Phase
 
-	//Narrow Phase
+	///@Surviving pairs MUST be colliding.
+	
+	//@Narrow Phase
 	for (unsigned int i = 0; i < m_collidingPairs.size(); i++) {
 		NarrowPhase(m_collidingPairs[i].first, m_collidingPairs[i].second);
 	}
 }
+///Broad phase component
+bool PhysicSystem::BroadPhase(RigidbodyComponent * rb1, RigidbodyComponent * rb2) {
+
+	if (rb1->m_isKinematic && rb2->m_isKinematic) return false;
+	//@Compute AABBs
+	if (m_AABBCulling.isEnabled) {
+		//@We assume shapes as spheres
+		Sphere * sphere1 = dynamic_cast<Sphere*>(rb1->m_shape);
+		Sphere * sphere2 = dynamic_cast<Sphere*>(rb2->m_shape);
+		TransformComponent * t1 = &rb1->m_owner->m_transform;
+		TransformComponent * t2 = &rb2->m_owner->m_transform;
+
+		AABB box1 = sphere1->ComputeAABB();
+		box1.m_minExtent += t1->m_position;
+		box1.m_maxExtent += t1->m_position;
+
+		AABB box2 = sphere2->ComputeAABB();
+		box2.m_minExtent += t2->m_position;
+		box2.m_maxExtent += t2->m_position;
+
+		//Define bounds
+		float thisRight = box1.m_maxExtent.x; float otherRight = box2.m_maxExtent.x;
+		float thisLeft = box1.m_minExtent.x; float otherLeft = box2.m_minExtent.x;
+		float thisTop = box1.m_maxExtent.y; float otherTop = box2.m_maxExtent.y;
+		float thisBottom = box1.m_minExtent.y; float otherBottom = box2.m_minExtent.y;
+		float thisFront = box1.m_maxExtent.z; float otherFront = box2.m_maxExtent.z;
+		float thisBack = box1.m_minExtent.z; float otherBack = box2.m_minExtent.z;
+
+		if (!(
+			thisRight < otherLeft
+			|| thisLeft > otherRight
+			|| thisTop < otherBottom
+			|| thisBottom > otherTop
+			|| thisFront < otherBack
+			|| thisBack > otherFront
+			)
+			) {
+			//@Set AABB colors
+			sphere1->m_AABBColor = Colors::Yellow;
+			sphere2->m_AABBColor = Colors::Yellow;
+			return true;
+		}
+		else {
+			return false;
+		}
+	}
+
+	//Default: if BroadPhase is disabled
+	return true;
+}
+///Narrow phase component
 bool PhysicSystem::NarrowPhase(RigidbodyComponent * rb1, RigidbodyComponent * rb2) {
 
 	if (rb1->m_isKinematic && rb2->m_isKinematic) return false;
@@ -141,9 +207,13 @@ bool PhysicSystem::NarrowPhase(RigidbodyComponent * rb1, RigidbodyComponent * rb
 		//@What if two objects with no velocity just collided?
 		float v1Ratio = v1Length / (v1Length + v2Length);
 		float v2Ratio = v2Length / (v1Length + v2Length);
-		t1->m_position -= v1Ratio * overlap * (t1->m_position - t2->m_position) / dist;
-		t2->m_position += v2Ratio * overlap * (t1->m_position - t2->m_position) / dist;
-		
+
+		//@We want to keep values for accurate displacement
+		Vector3 pos1Prev = t1->m_position;
+		Vector3 pos2Prev = t2->m_position;
+		t1->m_position -= v1Ratio * overlap * (pos1Prev - pos2Prev) / dist;
+		t2->m_position += v2Ratio * overlap * (pos1Prev - pos2Prev) / dist;
+
 		///2:Dynamic resolution
 		//http://www.gamasutra.com/view/feature/131424/pool_hall_lessons_fast_accurate_.php?page=3
 		// First, find the normalized vector n from the center of 
@@ -162,11 +232,11 @@ bool PhysicSystem::NarrowPhase(RigidbodyComponent * rb1, RigidbodyComponent * rb
 		// optimizedP =  2(a1 - a2)
 		//              -----------
 		//                m1 + m2
-		float optimizedP = (2.0f * (a1 - a2))/(rb1->m_mass + rb2->m_mass);
+		float optimizedP = (2.0f * (a1 - a2)) / (rb1->m_mass + rb2->m_mass);
 
 		// Calculate v1', the new movement vector of circle1
 		// v1' = v1 - optimizedP * m2 * n
-		rb1->m_velocity  = rb1->m_velocity - optimizedP * rb2->m_mass * normal;
+		rb1->m_velocity = rb1->m_velocity - optimizedP * rb2->m_mass * normal;
 
 		// Calculate v1', the new movement vector of circle1
 		// v2' = v2 + optimizedP * m1 * n
@@ -175,46 +245,4 @@ bool PhysicSystem::NarrowPhase(RigidbodyComponent * rb1, RigidbodyComponent * rb
 		return true;
 	}
 	return false;
-}
-
-bool PhysicSystem::BroadPhase(RigidbodyComponent * rb1, RigidbodyComponent * rb2) {
-	//Check different approaches as booleans
-
-	//@Compute AABBs
-	if (m_AABBCulling) {
-		//@We assume shapes as spheres
-		Sphere * sphere1 = dynamic_cast<Sphere*>(rb1->m_shape);
-		Sphere * sphere2 = dynamic_cast<Sphere*>(rb2->m_shape);
-		TransformComponent * t1 = &rb1->m_owner->m_transform;
-		TransformComponent * t2 = &rb2->m_owner->m_transform;
-
-		AABB box1 = sphere1->ComputeAABB();
-		box1.m_minExtent += t1->m_position;
-		box1.m_maxExtent += t1->m_position;
-
-		AABB box2 = sphere2->ComputeAABB();
-		box2.m_minExtent += t2->m_position;
-		box2.m_maxExtent += t2->m_position;
-
-		//Define bounds
-		float thisRight = box1.m_maxExtent.x; float otherRight = box2.m_maxExtent.x;
-		float thisLeft = box1.m_minExtent.x; float otherLeft = box2.m_minExtent.x;
-		float thisTop = box1.m_maxExtent.y; float otherTop = box2.m_maxExtent.y;
-		float thisBottom = box1.m_minExtent.y; float otherBottom = box2.m_minExtent.y;
-		float thisFront = box1.m_maxExtent.z; float otherFront = box2.m_maxExtent.z;
-		float thisBack = box1.m_minExtent.z; float otherBack = box2.m_minExtent.z;
-
-		return (!(
-			thisRight < otherLeft
-			|| thisLeft > otherRight
-			|| thisTop < otherBottom
-			|| thisBottom > otherTop
-			|| thisFront < otherBack
-			|| thisBack > otherFront
-			)
-			);
-	}
-
-	//Default: if BroadPhase is disabled
-	return true;
 }

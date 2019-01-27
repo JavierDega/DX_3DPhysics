@@ -3,8 +3,8 @@
 
 using namespace DirectX;
 
-Shape::Shape(XMVECTOR Color)
-	: m_color(Color)
+Shape::Shape(XMVECTOR Color, XMVECTOR AABBColor)
+	: m_color(Color), m_AABBColor(AABBColor)
 {
 }
 

@@ -1,6 +1,9 @@
 #include "pch.h"
 #include "..\Headers\InputSystem.h"
 #include "GraphicSystem.h"
+#include "PhysicSystem.h"
+#include "ObjectSystem.h"
+
 extern void ExitGame();
 
 using namespace DirectX;
@@ -46,6 +49,7 @@ void InputSystem::Initialize(ID3D11Device1 * device, ID3D11DeviceContext1 * devi
 	m_look = &gs->m_look;
 	m_pitch = &gs->m_pitch;
 	m_yaw = &gs->m_yaw;
+	//@Input classes
 	m_keyboard = std::make_unique<Keyboard>();
 	m_mouse = std::make_unique<Mouse>();
 	
@@ -55,8 +59,17 @@ void InputSystem::InitWindow(D3D11_VIEWPORT screenViewport)
 }
 void InputSystem::Update(float dt)
 {
+	PhysicSystem * ps = PhysicSystem::GetInstance();
+
 	//@Mouse
 	auto mouse = m_mouse->GetState();
+	m_mouseTracker.Update(mouse);
+	/*using ButtonState = Mouse::ButtonStateTracker::ButtonState;
+	if (m_mouseTracker.leftButton == ButtonState::PRESSED){
+		// Take an action when left mouse button is first pressed,
+		// but don't do it again until the button is released and
+		// then pressed again
+	}*/
 	if (mouse.positionMode == Mouse::MODE_RELATIVE)
 	{
 		Vector3 delta = Vector3(float(mouse.x), float(mouse.y), 0.f) * dt;
@@ -77,13 +90,18 @@ void InputSystem::Update(float dt)
 			*m_yaw += XM_PI * 2.0f;
 		}
 	}
-	m_mouse->SetMode(mouse.leftButton ? Mouse::MODE_ABSOLUTE : Mouse::MODE_RELATIVE);
+	m_mouse->SetMode(mouse.rightButton ? Mouse::MODE_ABSOLUTE : Mouse::MODE_RELATIVE);
 
 	//@Get directional vector from m_cam to m_look
 	auto kb = m_keyboard->GetState();
+	m_keyboardTracker.Update(kb);
+
 	if (kb.Escape)
 	{
 		ExitGame();
+	}
+	if (m_keyboardTracker.pressed.F1) {
+		ps->m_AABBCulling.isEnabled = !ps->m_AABBCulling.isEnabled;
 	}
 	//@Already normalized
 	Vector3 relativeForward = *m_look - *m_cam;
@@ -119,6 +137,9 @@ void InputSystem::Update(float dt)
 void InputSystem::Reset()
 {
 }
+
+///Utility
+///Set window
 void InputSystem::SetMouseWindow(HWND window)
 {
 	m_mouse->SetWindow(window);
@@ -126,3 +147,4 @@ void InputSystem::SetMouseWindow(HWND window)
 void InputSystem::ScanInput()
 {
 }
+

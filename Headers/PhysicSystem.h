@@ -3,13 +3,19 @@
 #include "System.h"
 #include "RigidbodyComponent.h"
 
-//@Iterates on all rigidbodies
-//Computing timestep, then running:
-//Kinematics update
-//Space subdivision (Binning algorithm)
-//Broad Phase Solver
-//Medium Phase Solver
-//Narrow phase Solver on final colliding pairs
+typedef struct SettingStr {
+	std::wstring log;
+	bool isEnabled;
+}Setting;
+
+/*Iterates on all rigidbodies
+Computing timestep, then running:
+Integration update (Semi-euler - Verlet)
+Space subdivision (Uniform - Octree)
+Broad Phase Solver (AABB - Sphere culling)
+Medium Phase Solver (GJK)
+Narrow phase Solver on final colliding pairs ( OBBs - Cylinders - Capsules)
+*/
 class PhysicSystem :
 	public System
 {
@@ -22,8 +28,9 @@ public:
 	~PhysicSystem();
 	//Singleton
 	static PhysicSystem* GetInstance();
+
 	///Functions
-	//@Events
+	//Events
 	void Initialize(ID3D11Device1* device = nullptr, ID3D11DeviceContext1 * deviceContext = nullptr);
 	void InitWindow(D3D11_VIEWPORT screenViewport = D3D11_VIEWPORT{ 0, 0, 0, 0 });
 	virtual void Update(float dt);
@@ -34,16 +41,16 @@ public:
 	bool NarrowPhase(RigidbodyComponent * rb1, RigidbodyComponent *rb2);
 
 	//Variables
-	DirectX::SimpleMath::Vector3 m_gravity;
-	float m_airViscosity;
-	//Timestep
+	//@Timestep
 	float m_minDt;
 	float m_accumulator;
-
-	//Algorithms
+	//@Simulation settings
+	DirectX::SimpleMath::Vector3 m_gravity;
+	float m_airViscosity;
+	std::wstring m_fps;
 	//Space subdivision
 	//BroadPhase
-	bool m_AABBCulling;
+	Setting m_AABBCulling;
 	//Medium phase
 
 };

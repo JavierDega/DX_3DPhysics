@@ -16,13 +16,12 @@ GameObject::~GameObject()
 {
 
 }
-//AddComp
+///We add the component to the vector, and we set reference
 void GameObject::AddComponent(Component * component) {
-	//We add the component to the vector, and we set reference (Just in case)
 	component->m_owner = this;
 	m_components.push_back(component);
 }
-
+///Broadcast message to all children components
 void GameObject::Send(ComponentMessage msg)
 {
 	for (int i = 0; i < m_components.size(); i++)
@@ -30,10 +29,9 @@ void GameObject::Send(ComponentMessage msg)
 		m_components[i]->Receive(msg);
 	}
 }
-
+///Refresh pointer to parent gameObject in all component children
 void GameObject::RefreshComponentAddresses()
 {
-	//@Redefine pointer in component->m_owner
 	for (unsigned int i = 0; i < m_components.size(); i++) {
 		m_components[i]->m_owner = this;
 	}

@@ -7,21 +7,21 @@
 #include <string>
 #include <vector>
 
-//@Stores components, has string id
+///Stores components, has transform and ID
 class GameObject {
 public:
 	GameObject(std::string name = "Default name", DirectX::SimpleMath::Vector3 position = DirectX::SimpleMath::Vector3( 0, 0, 0 ));
 	~GameObject();
+
 	//Functions
 	void AddComponent(Component * component);
-	//Messages
+	//Messaging
 	virtual void Send(ComponentMessage msg);
 	void RefreshComponentAddresses();
+
 	//Variables
-	std::string m_name;
-	//All gameobjects have a transform component
+	std::string m_name; //@HashIds?SlotMaps?Handles?
 	TransformComponent m_transform;
-	//Cache coherency avoiding 'new'
 	std::vector<Component *> m_components;
 };
 #endif /*GAMEOBJECT_H_*/
