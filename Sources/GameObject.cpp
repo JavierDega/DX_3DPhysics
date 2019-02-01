@@ -14,7 +14,13 @@ GameObject::GameObject(std::string name, Vector3 position)
 //Destructor
 GameObject::~GameObject()
 {
-
+	while (!m_components.empty()) {
+		Component * curComp = m_components.back();
+		m_components.pop_back();
+		delete curComp;
+		curComp = nullptr;
+	}
+	bool debug;
 }
 ///We add the component to the vector, and we set reference
 void GameObject::AddComponent(Component * component) {

@@ -22,9 +22,10 @@ PhysicSystem * PhysicSystem::GetInstance()
 //Constructor
 PhysicSystem::PhysicSystem()
 {
-	m_gravity = Vector3 ( 0, -9.8f, 0 );
+	m_gravity = Vector3 ( 0, -9.8f, 0 );//@Relative to mass
 	//Viscosity for earth's air @  0'Celsius = 1.33*10^-5 kg/ms^2
 	m_airViscosity = 0.133f;
+	m_frictionCoefficient = .01f;
 	m_minDt = 1.0f / 60.0f;
 	m_accumulator = 0;
 
@@ -97,8 +98,11 @@ void PhysicSystem::UpdatePhysics(float dt) {
 		}
 		else
 		{
-			currentRb->m_force -= m_airViscosity * currentRb->m_velocity;
-			currentRb->m_force += m_gravity;
+			//Calculate generalized forces
+			currentRb->m_force -= m_airViscosity * currentRb->m_velocity;//@Viscosity
+			currentRb->m_force += m_gravity*currentRb->m_mass;//@force relative to mass
+
+			//Apply forces
 			currentRb->m_acceleration = currentRb->m_force / currentRb->m_mass;
 			currentRb->m_velocity += currentRb->m_acceleration*dt;
 			currentRb->m_owner->m_transform.m_position += currentRb->m_velocity*dt;
@@ -123,13 +127,14 @@ void PhysicSystem::UpdatePhysics(float dt) {
 	
 	//@Narrow Phase
 	for (unsigned int i = 0; i < m_collidingPairs.size(); i++) {
-		NarrowPhase(m_collidingPairs[i].first, m_collidingPairs[i].second);
+		NarrowPhase(m_collidingPairs[i].first, m_collidingPairs[i].second, dt);
 	}
 }
 ///Broad phase component
 bool PhysicSystem::BroadPhase(RigidbodyComponent * rb1, RigidbodyComponent * rb2) {
 
 	if (rb1->m_isKinematic && rb2->m_isKinematic) return false;
+
 	//@Compute AABBs
 	if (m_AABBCulling.isEnabled) {
 		//@We assume shapes as spheres
@@ -177,9 +182,8 @@ bool PhysicSystem::BroadPhase(RigidbodyComponent * rb1, RigidbodyComponent * rb2
 	return true;
 }
 ///Narrow phase component
-bool PhysicSystem::NarrowPhase(RigidbodyComponent * rb1, RigidbodyComponent * rb2) {
+bool PhysicSystem::NarrowPhase(RigidbodyComponent * rb1, RigidbodyComponent * rb2, float dt ) {
 
-	if (rb1->m_isKinematic && rb2->m_isKinematic) return false;
 
 	Sphere * sphere1 = dynamic_cast<Sphere*>(rb1->m_shape);
 	Sphere * sphere2 = dynamic_cast<Sphere*>(rb2->m_shape);
@@ -211,20 +215,23 @@ bool PhysicSystem::NarrowPhase(RigidbodyComponent * rb1, RigidbodyComponent * rb
 		//@We want to keep values for accurate displacement
 		Vector3 pos1Prev = t1->m_position;
 		Vector3 pos2Prev = t2->m_position;
-		t1->m_position -= v1Ratio * overlap * (pos1Prev - pos2Prev) / dist;
-		t2->m_position += v2Ratio * overlap * (pos1Prev - pos2Prev) / dist;
+
+		if(!rb1->m_isKinematic)t1->m_position -= v1Ratio * overlap * (pos1Prev - pos2Prev) / dist;
+		if(!rb2->m_isKinematic)t2->m_position += v2Ratio * overlap * (pos1Prev - pos2Prev) / dist;
+
 
 		///2:Dynamic resolution
 		//http://www.gamasutra.com/view/feature/131424/pool_hall_lessons_fast_accurate_.php?page=3
 		// First, find the normalized vector n from the center of 
 		// circle1 to the center of circle2
-		Vector3 normal = t1->m_position - t2->m_position;
-		normal.Normalize();
 
 		// Find the length of the component of each of the movement
 		// vectors along n. 
 		// a1 = v1 . n
 		// a2 = v2 . n
+		Vector3 normal = t1->m_position - t2->m_position;
+		normal.Normalize();
+
 		float a1 = rb1->m_velocity.Dot(normal);
 		float a2 = rb2->m_velocity.Dot(normal);
 
@@ -234,13 +241,41 @@ bool PhysicSystem::NarrowPhase(RigidbodyComponent * rb1, RigidbodyComponent * rb
 		//                m1 + m2
 		float optimizedP = (2.0f * (a1 - a2)) / (rb1->m_mass + rb2->m_mass);
 
+		//@Store previous velocity
+		Vector3 prevVel = rb1->m_velocity;
+		Vector3 prevVel2 = rb2->m_velocity;
+
 		// Calculate v1', the new movement vector of circle1
 		// v1' = v1 - optimizedP * m2 * n
 		rb1->m_velocity = rb1->m_velocity - optimizedP * rb2->m_mass * normal;
-
-		// Calculate v1', the new movement vector of circle1
-		// v2' = v2 + optimizedP * m1 * n
 		rb2->m_velocity = rb2->m_velocity + optimizedP * rb1->m_mass * normal;
+
+		Vector3 velDelta = rb1->m_velocity - prevVel;
+		Vector3 velDelta2 = rb2->m_velocity - prevVel2;
+
+		//3: Friction
+		//@Friction:
+		//Calculate normal force from impulse
+		//f = m*a
+		//f = mdv/dt
+		Vector3 rb1Force = rb1->m_mass * velDelta / dt;
+		//Find component of force along normal
+		float normalForce = rb1Force.Dot(normal);//@DX11's Dot is unnornalized so already multiplied by length
+
+		Vector3 rb2Force = rb2->m_mass * velDelta2 / dt;
+		float normal2Force = rb2Force.Dot(normal);
+
+		Vector3 vel1Norm = rb1->m_velocity;
+		vel1Norm.Normalize();
+		Vector3 vel2Norm = rb2->m_velocity;
+		vel2Norm.Normalize();
+
+		Vector3 friction1 = -vel1Norm * m_frictionCoefficient * abs(normalForce);//normalForce should be positive here
+		rb1->m_force += friction1;
+
+		Vector3 friction2 = -vel2Norm * m_frictionCoefficient * abs(normal2Force);//normal2Force should be negative here
+		rb2->m_force += friction2;
+		
 
 		return true;
 	}

@@ -38,7 +38,7 @@ public:
 	//Utility
 	void UpdatePhysics(float dt);
 	bool BroadPhase(RigidbodyComponent * rb1, RigidbodyComponent *rb2);
-	bool NarrowPhase(RigidbodyComponent * rb1, RigidbodyComponent *rb2);
+	bool NarrowPhase(RigidbodyComponent * rb1, RigidbodyComponent *rb2, float dt );
 
 	//Variables
 	//@Timestep
@@ -46,6 +46,7 @@ public:
 	float m_accumulator;
 	//@Simulation settings
 	DirectX::SimpleMath::Vector3 m_gravity;
+	float m_frictionCoefficient;//@Same for all objects?
 	float m_airViscosity;
 	std::wstring m_fps;
 	//Space subdivision

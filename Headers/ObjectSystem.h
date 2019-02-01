@@ -25,14 +25,14 @@ public:
 	virtual void Update(float dt = 0);
 	virtual void Reset();
 	//Utility
-	GameObject * AddObject(std::string name = "Default name", DirectX::SimpleMath::Vector3 position = DirectX::SimpleMath::Vector3( 0, 0, 0 ));
+	int AddObject(GameObject * obj);
 	void RemoveAllObjects();
 	void RemoveObject(GameObject * object);
 	std::vector< RigidbodyComponent * > GetRigidbodyComponentList();
 	void LoadScene1();
 
 	//Variables
-	std::vector<GameObject> m_objectList;
+	std::vector<GameObject * > m_objectList;
 };
 
 #endif /*OBJECTSYSTEM_H_*/
