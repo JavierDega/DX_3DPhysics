@@ -14,6 +14,12 @@
     <Filter Include="Common">
       <UniqueIdentifier>711bf8eb-89c2-470c-97cc-703121c256b1</UniqueIdentifier>
     </Filter>
+    <Filter Include="Sources\Shapes">
+      <UniqueIdentifier>{198ec1fc-b420-4be9-b5a7-c4ab6d6d8f7f}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Headers\Shapes">
+      <UniqueIdentifier>{df91ee0e-b768-4c3a-9665-23debf6f4d5a}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="pch.h" />
@@ -48,17 +54,20 @@
     <ClInclude Include="Headers\PhysicSystem.h">
       <Filter>Headers</Filter>
     </ClInclude>
-    <ClInclude Include="Headers\Shape.h">
-      <Filter>Headers</Filter>
-    </ClInclude>
-    <ClInclude Include="Headers\Sphere.h">
-      <Filter>Headers</Filter>
-    </ClInclude>
     <ClInclude Include="Headers\InputSystem.h">
       <Filter>Headers</Filter>
     </ClInclude>
     <ClInclude Include="DebugDraw.h">
       <Filter>Common</Filter>
+    </ClInclude>
+    <ClInclude Include="Headers\Shape.h">
+      <Filter>Headers\Shapes</Filter>
+    </ClInclude>
+    <ClInclude Include="Headers\Sphere.h">
+      <Filter>Headers\Shapes</Filter>
+    </ClInclude>
+    <ClInclude Include="Headers\OrientedBoundingBox.h">
+      <Filter>Headers\Shapes</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
@@ -92,17 +101,20 @@
     <ClCompile Include="Sources\PhysicSystem.cpp">
       <Filter>Sources</Filter>
     </ClCompile>
-    <ClCompile Include="Sources\Shape.cpp">
-      <Filter>Sources</Filter>
-    </ClCompile>
-    <ClCompile Include="Sources\Sphere.cpp">
-      <Filter>Sources</Filter>
-    </ClCompile>
     <ClCompile Include="Sources\InputSystem.cpp">
       <Filter>Sources</Filter>
     </ClCompile>
     <ClCompile Include="DebugDraw.cpp">
       <Filter>Common</Filter>
+    </ClCompile>
+    <ClCompile Include="Sources\Shape.cpp">
+      <Filter>Sources\Shapes</Filter>
+    </ClCompile>
+    <ClCompile Include="Sources\Sphere.cpp">
+      <Filter>Sources\Shapes</Filter>
+    </ClCompile>
+    <ClCompile Include="Sources\OrientedBoundingBox.cpp">
+      <Filter>Sources\Shapes</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

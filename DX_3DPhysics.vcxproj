@@ -164,6 +164,7 @@
     <ClInclude Include="Headers\GraphicSystem.h" />
     <ClInclude Include="Headers\InputSystem.h" />
     <ClInclude Include="Headers\ObjectSystem.h" />
+    <ClInclude Include="Headers\OrientedBoundingBox.h" />
     <ClInclude Include="Headers\PhysicSystem.h" />
     <ClInclude Include="Headers\RigidbodyComponent.h" />
     <ClInclude Include="Headers\Shape.h" />
@@ -189,6 +190,7 @@
     <ClCompile Include="Sources\GraphicSystem.cpp" />
     <ClCompile Include="Sources\InputSystem.cpp" />
     <ClCompile Include="Sources\ObjectSystem.cpp" />
+    <ClCompile Include="Sources\OrientedBoundingBox.cpp" />
     <ClCompile Include="Sources\PhysicSystem.cpp" />
     <ClCompile Include="Sources\RigidbodyComponent.cpp" />
     <ClCompile Include="Sources\Shape.cpp" />

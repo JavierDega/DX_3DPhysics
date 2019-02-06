@@ -3,6 +3,8 @@
 #include "ObjectSystem.h"
 #include "PhysicSystem.h"
 #include "Sphere.h"
+#include "OrientedBoundingBox.h"
+
 #include <stdio.h>
 
 using namespace std;
@@ -44,13 +46,17 @@ void GraphicSystem::Initialize(ID3D11Device1* device, ID3D11DeviceContext1 * dev
 	for (unsigned int i = 0; i < rigidbodies.size(); i++) {
 		//Downcast to create the right shape
 		Sphere * theSphere = dynamic_cast<Sphere*>(rigidbodies[i]->m_shape);
+		OrientedBoundingBox * theOBB = dynamic_cast<OrientedBoundingBox*>(rigidbodies[i]->m_shape);
+
 		if (theSphere) {
 			theSphere->m_primitive = GeometricPrimitive::CreateSphere(deviceContext, theSphere->m_radius * 2);
 		}
+		else if (theOBB) {
+			theOBB->m_primitive = GeometricPrimitive::CreateBox(deviceContext, theOBB->m_extents*2);
+		}
 
 		//@Get AABB size
-		AABB aabb = rigidbodies[i]->m_shape->ComputeAABB();
-		Vector3 AABBSize = aabb.m_maxExtent - aabb.m_minExtent;
+		Vector3 AABBSize = rigidbodies[i]->m_shape->m_AABB.m_maxExtent - rigidbodies[i]->m_shape->m_AABB.m_minExtent;
 		rigidbodies[i]->m_shape->m_AABBPrimitive = GeometricPrimitive::CreateBox(deviceContext, AABBSize);
 	}
 }
@@ -73,20 +79,27 @@ void GraphicSystem::Update(float dt) {
 	float z = r * cosf(m_yaw);
 	float x = r * sinf(m_yaw);
 	m_look = m_cam + Vector3(x, y, z);
-	m_view = Matrix::CreateLookAt(m_cam, m_look, Vector3::Up);
+	Matrix view = Matrix::CreateLookAt(m_cam, m_look, Vector3::Up);
 
 	//@Render
 	for (unsigned int i = 0; i < rigidbodies.size(); i++) {
 		//Init each
 		RigidbodyComponent * currentRb = rigidbodies[i];
 		TransformComponent currentTransform = currentRb->m_owner->m_transform;
-		Matrix m_world = Matrix::CreateTranslation(currentTransform.m_position);
-		currentRb->m_shape->m_primitive->Draw( m_world, m_view, m_proj, currentRb->m_shape->m_color );
+		Matrix translation = Matrix::CreateTranslation(currentTransform.m_position);
+		Matrix rotation = Matrix::CreateFromQuaternion(currentTransform.m_rotation);
+		Matrix scale = Matrix::CreateScale(currentTransform.m_scale);
+		Matrix world = scale * rotation*translation;
+
+		currentRb->m_shape->m_primitive->Draw( world, view, m_proj, currentRb->m_shape->m_color );
 
 		//@Debug draw (Wireframes)
 		if (ps->m_AABBCulling.isEnabled) {
 			//If its enabled, the PhysicsSystem, should of have computed, and updated, the AABB
-			currentRb->m_shape->m_AABBPrimitive->Draw(m_world, m_view, m_proj, currentRb->m_shape->m_AABBColor, nullptr, true);
+			currentRb->m_shape->m_AABBPrimitive->Draw( world, view, m_proj, currentRb->m_shape->m_AABBColor, nullptr, true);
+		}
+		if (ps->m_sphereCulling.isEnabled) {
+		
 		}
 	}
 
@@ -108,6 +121,8 @@ void GraphicSystem::Reset()
 	//@Reset shapes
 	for (unsigned int i = 0; i < rigidbodies.size(); i++) {
 		rigidbodies[i]->m_shape->m_primitive.reset();
+		rigidbodies[i]->m_shape->m_AABBPrimitive.reset();
+		rigidbodies[i]->m_shape->m_spherePrimitive.reset();
 	}
 
 	//@Reset spriteBatch

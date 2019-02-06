@@ -8,7 +8,7 @@ class Sphere :
 public:
 	Sphere(float radius = 0.5f, DirectX::XMVECTOR color = DirectX::Colors::White);
 	~Sphere();
-	virtual AABB ComputeAABB();
+
 	//Variables
 	float m_radius;
 };

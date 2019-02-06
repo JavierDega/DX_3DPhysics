@@ -21,5 +21,6 @@ public:
 	bool m_isKinematic;
 	//Semi euler
 	DirectX::SimpleMath::Vector3 m_force, m_acceleration, m_velocity;
+
 };
 #endif /*RIGIDBODYCOMPONENT_H_*/

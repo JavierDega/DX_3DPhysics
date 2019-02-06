@@ -30,7 +30,6 @@ public:
 	std::unique_ptr<DirectX::SpriteBatch> m_spriteBatch;
 	std::unique_ptr<DirectX::SpriteFont> m_font;
 	//@Matrices - Coordinate spaces
-	DirectX::SimpleMath::Matrix m_view;
 	DirectX::SimpleMath::Matrix m_proj;
 	//@Camera
 	DirectX::SimpleMath::Vector3 m_cam;

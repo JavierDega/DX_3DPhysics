@@ -3,9 +3,10 @@
 
 using namespace DirectX;
 
-Shape::Shape(XMVECTOR Color, XMVECTOR AABBColor)
-	: m_color(Color), m_AABBColor(AABBColor)
+Shape::Shape(XMVECTOR Color, XMVECTOR AABBColor, XMVECTOR sphereColor)
+	: m_color(Color), m_AABBColor(AABBColor), m_sphereColor(sphereColor)
 {
+
 }
 
 

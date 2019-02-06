@@ -2,6 +2,7 @@
 #include "..\Headers\PhysicSystem.h"
 #include "ObjectSystem.h"
 #include "Sphere.h"
+#include "OrientedBoundingBox.h"
 
 using namespace DirectX;
 using namespace SimpleMath;
@@ -28,8 +29,8 @@ PhysicSystem::PhysicSystem()
 	m_frictionCoefficient = .01f;
 	m_minDt = 1.0f / 60.0f;
 	m_accumulator = 0;
-
 	m_AABBCulling.isEnabled = true;
+	m_sphereCulling.isEnabled = false;
 }
 //Destructor
 PhysicSystem::~PhysicSystem()
@@ -40,6 +41,12 @@ PhysicSystem::~PhysicSystem()
 void PhysicSystem::Initialize(ID3D11Device1 * device, ID3D11DeviceContext1 * deviceContext)
 {
 	//@What do here?
+	//Process bounding volumes of all rigidbody shapes, so that we can create associated geometric primitives on graphic system
+	vector<RigidbodyComponent*> m_rigidbodies = ObjectSystem::GetInstance()->GetRigidbodyComponentList();
+	for (RigidbodyComponent* rb : m_rigidbodies) {
+		ComputeAABB(rb);
+		//ComputeSphere(rb);?
+	}
 }
 ///Init window
 void PhysicSystem::InitWindow(D3D11_VIEWPORT screenViewport)
@@ -52,6 +59,7 @@ void PhysicSystem::Update(float dt)
 	//@Update settings text
 	m_fps = to_wstring(1 / dt);
 	m_AABBCulling.log = m_AABBCulling.isEnabled ? L"Press F1 to disable AABB culling" : L"Press F1 to enable AABB culling";
+	m_sphereCulling.log = m_sphereCulling.isEnabled ? L"Press F1 to disable sphere culling" : L"Press F1 to enable sphere culling";
 
 	//@Timestep
 	//https://gamedevelopment.tutsplus.com/tutorials/how-to-create-a-custom-2d-physics-engine-the-core-engine--gamedev-7493
@@ -86,6 +94,7 @@ void PhysicSystem::UpdatePhysics(float dt) {
 	//@Clear debug colors
 	for (RigidbodyComponent* rb : m_rigidbodies){
 		rb->m_shape->m_AABBColor = Colors::Red;
+		rb->m_shape->m_sphereColor = Colors::Red;
 	}	
 
 	//@First loop: Integration + First culling algorithm
@@ -130,26 +139,22 @@ void PhysicSystem::UpdatePhysics(float dt) {
 		NarrowPhase(m_collidingPairs[i].first, m_collidingPairs[i].second, dt);
 	}
 }
-///Broad phase component
+//@BROADPHASE
 bool PhysicSystem::BroadPhase(RigidbodyComponent * rb1, RigidbodyComponent * rb2) {
 
-	if (rb1->m_isKinematic && rb2->m_isKinematic) return false;
+	if (rb1->m_isKinematic && rb2->m_isKinematic) return false;//@Two kinematic colliders dont need collision response
 
-	//@Compute AABBs
+
+	//@Compute AABB
+	if (m_sphereCulling.isEnabled) {
+		//@Same process
+	
+	}
 	if (m_AABBCulling.isEnabled) {
-		//@We assume shapes as spheres
-		Sphere * sphere1 = dynamic_cast<Sphere*>(rb1->m_shape);
-		Sphere * sphere2 = dynamic_cast<Sphere*>(rb2->m_shape);
-		TransformComponent * t1 = &rb1->m_owner->m_transform;
-		TransformComponent * t2 = &rb2->m_owner->m_transform;
 
-		AABB box1 = sphere1->ComputeAABB();
-		box1.m_minExtent += t1->m_position;
-		box1.m_maxExtent += t1->m_position;
-
-		AABB box2 = sphere2->ComputeAABB();
-		box2.m_minExtent += t2->m_position;
-		box2.m_maxExtent += t2->m_position;
+		//Get aabbs depending on shape, and transform state (Rotation)
+		AABB box1 = ComputeAABB(rb1);
+		AABB box2 = ComputeAABB(rb2);
 
 		//Define bounds
 		float thisRight = box1.m_maxExtent.x; float otherRight = box2.m_maxExtent.x;
@@ -169,8 +174,8 @@ bool PhysicSystem::BroadPhase(RigidbodyComponent * rb1, RigidbodyComponent * rb2
 			)
 			) {
 			//@Set AABB colors
-			sphere1->m_AABBColor = Colors::Yellow;
-			sphere2->m_AABBColor = Colors::Yellow;
+			rb1->m_shape->m_AABBColor = Colors::Yellow;
+			rb2->m_shape->m_AABBColor = Colors::Yellow;
 			return true;
 		}
 		else {
@@ -181,7 +186,37 @@ bool PhysicSystem::BroadPhase(RigidbodyComponent * rb1, RigidbodyComponent * rb2
 	//Default: if BroadPhase is disabled
 	return true;
 }
-///Narrow phase component
+AABB PhysicSystem::ComputeAABB(RigidbodyComponent * rb)
+{
+	//Dynamic cast to find shape
+	Sphere* sphere = dynamic_cast<Sphere*>(rb->m_shape);
+	OrientedBoundingBox * obb = dynamic_cast<OrientedBoundingBox*>(rb->m_shape);
+	
+	//@Process AABB information, using necessary TransformComponent info (Rotation?)
+	if (sphere) {
+
+		sphere->m_AABB = AABB{ Vector3(-sphere->m_radius, -sphere->m_radius, -sphere->m_radius), Vector3(sphere->m_radius, sphere->m_radius, sphere->m_radius)};
+		sphere->m_AABB.m_minExtent += rb->m_owner->m_transform.m_position;
+		sphere->m_AABB.m_maxExtent += rb->m_owner->m_transform.m_position;
+	}
+	else if (obb) {
+		Matrix m;
+		Vector3 v;
+		Matrix m2 = Matrix::CreateTranslation(v);
+		m *= m2;
+		Vector3 resultV;
+		Vector3 resultScale;
+		Quaternion resultRot;
+		m.Decompose( resultScale, resultRot , resultV);
+		#pragma region AABB from OBB
+
+
+		#pragma endregion
+	}
+
+	return rb->m_shape->m_AABB;
+}
+//@NARROWPHASE
 bool PhysicSystem::NarrowPhase(RigidbodyComponent * rb1, RigidbodyComponent * rb2, float dt ) {
 
 
@@ -202,6 +237,7 @@ bool PhysicSystem::NarrowPhase(RigidbodyComponent * rb1, RigidbodyComponent * rb
 		// A and B are touching
 		//@Impulse based collision resolution
 		///1:Displacement
+		#pragma region Displacement
 		//Calculate overlap
 		float dist = sqrtf(distSq);
 		float overlap = (dist - sphere1->m_radius - sphere2->m_radius);
@@ -218,9 +254,10 @@ bool PhysicSystem::NarrowPhase(RigidbodyComponent * rb1, RigidbodyComponent * rb
 
 		if(!rb1->m_isKinematic)t1->m_position -= v1Ratio * overlap * (pos1Prev - pos2Prev) / dist;
 		if(!rb2->m_isKinematic)t2->m_position += v2Ratio * overlap * (pos1Prev - pos2Prev) / dist;
-
+		#pragma endregion
 
 		///2:Dynamic resolution
+		#pragma region Resolution
 		//http://www.gamasutra.com/view/feature/131424/pool_hall_lessons_fast_accurate_.php?page=3
 		// First, find the normalized vector n from the center of 
 		// circle1 to the center of circle2
@@ -250,10 +287,13 @@ bool PhysicSystem::NarrowPhase(RigidbodyComponent * rb1, RigidbodyComponent * rb
 		rb1->m_velocity = rb1->m_velocity - optimizedP * rb2->m_mass * normal;
 		rb2->m_velocity = rb2->m_velocity + optimizedP * rb1->m_mass * normal;
 
+		#pragma endregion
+
 		Vector3 velDelta = rb1->m_velocity - prevVel;
 		Vector3 velDelta2 = rb2->m_velocity - prevVel2;
 
-		//3: Friction
+		//3: Friction::Because of our Impulse based resolution, we need to calculate the normal force 'After the fact'
+		#pragma region Kinetic friction
 		//@Friction:
 		//Calculate normal force from impulse
 		//f = m*a
@@ -275,7 +315,7 @@ bool PhysicSystem::NarrowPhase(RigidbodyComponent * rb1, RigidbodyComponent * rb
 
 		Vector3 friction2 = -vel2Norm * m_frictionCoefficient * abs(normal2Force);//normal2Force should be negative here
 		rb2->m_force += friction2;
-		
+		#pragma endregion
 
 		return true;
 	}

@@ -36,8 +36,12 @@ public:
 	virtual void Update(float dt);
 	virtual void Reset();
 	//Utility
+	//@Timestep
 	void UpdatePhysics(float dt);
+	//@BroadPhase
 	bool BroadPhase(RigidbodyComponent * rb1, RigidbodyComponent *rb2);
+	AABB ComputeAABB(RigidbodyComponent * rb);
+	//@NarrowPhase
 	bool NarrowPhase(RigidbodyComponent * rb1, RigidbodyComponent *rb2, float dt );
 
 	//Variables
@@ -52,6 +56,7 @@ public:
 	//Space subdivision
 	//BroadPhase
 	Setting m_AABBCulling;
+	Setting m_sphereCulling;
 	//Medium phase
 
 };
