@@ -5,8 +5,8 @@
 using namespace DirectX;
 using namespace SimpleMath;
 
-OrientedBoundingBox::OrientedBoundingBox(Vector3 extents, XMVECTOR color)
-	: m_extents(extents), Shape(color)
+OrientedBoundingBox::OrientedBoundingBox(Vector3 halfExtents, XMVECTOR color)
+	: m_halfExtents(halfExtents), Shape( ShapeType::OBB, color)
 {
 }
 

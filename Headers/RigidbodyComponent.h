@@ -9,8 +9,15 @@ class RigidbodyComponent :
 {
 public:
 	//Funcs
-	//Sphere constructor
-	RigidbodyComponent(float radius = 0.5f, float mass = 10.0f, bool m_isKinematic = false, DirectX::XMVECTOR color = DirectX::Colors::White);
+
+	//@@@CONVENTION FOR CONSTRUCTORS:
+	//SHAPE PROPERTIES->MASS->IsKinematic->Color
+	//@TRY AND DIFFERENTIATE DIFFERENT COLLIDER SHAPES FROM DIFFERENT SHAPE PROPERTIES, DATA TYPE ORDER
+
+	//@Sphere constructor
+	RigidbodyComponent( float radius = 0.5f, float mass = 10.0f, bool isKinematic = false, DirectX::XMVECTOR color = DirectX::Colors::White);
+	//@OBB constructor
+	RigidbodyComponent( DirectX::SimpleMath::Vector3 halfExtents = DirectX::SimpleMath::Vector3::One, float mass = 10.0f, bool isKinematic = false, DirectX::XMVECTOR color = DirectX::Colors::White );
 	virtual ~RigidbodyComponent();
 	//Messaging
 	virtual bool Receive(ComponentMessage msg);

@@ -10,7 +10,9 @@
 ///Stores components, has transform and ID
 class GameObject {
 public:
-	GameObject(std::string name = "Default name", DirectX::SimpleMath::Vector3 position = DirectX::SimpleMath::Vector3( 0, 0, 0 ));
+	GameObject(std::string name = "Default name", DirectX::SimpleMath::Vector3 position = DirectX::SimpleMath::Vector3::Zero,
+		DirectX::SimpleMath::Quaternion rotation = DirectX::SimpleMath::Quaternion::Identity, 
+		DirectX::SimpleMath::Vector3 scale = DirectX::SimpleMath::Vector3::One );
 	~GameObject();
 
 	//Functions

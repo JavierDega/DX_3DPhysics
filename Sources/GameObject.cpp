@@ -6,10 +6,9 @@ using namespace DirectX;
 using namespace SimpleMath;
 
 //Constructor
-GameObject::GameObject(std::string name, Vector3 position)
-	: m_name(name), m_transform(position)
+GameObject::GameObject(std::string name, Vector3 position, Quaternion rotation, Vector3 scale)
+	: m_name(name), m_transform(position, rotation, scale)
 {
-
 }
 //Destructor
 GameObject::~GameObject()

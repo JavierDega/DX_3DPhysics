@@ -103,6 +103,13 @@ void InputSystem::Update(float dt)
 	if (m_keyboardTracker.pressed.F1) {
 		ps->m_AABBCulling.isEnabled = !ps->m_AABBCulling.isEnabled;
 	}
+	if (m_keyboardTracker.pressed.M) {
+		ps->m_stepMode = !ps->m_stepMode;
+	}
+	if (m_keyboardTracker.pressed.N) {
+		if (ps->m_stepMode)
+			ps->m_stepOnce = true;
+	}
 	//@Already normalized
 	Vector3 relativeForward = *m_look - *m_cam;
 	Vector3 relativeRight = relativeForward.Cross(Vector3::Up);

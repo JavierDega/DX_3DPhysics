@@ -29,7 +29,7 @@ public:
 	void RemoveAllObjects();
 	void RemoveObject(GameObject * object);
 	std::vector< RigidbodyComponent * > GetRigidbodyComponentList();
-	void LoadScene1();
+	void LoadScene(unsigned int index);
 
 	//Variables
 	std::vector<GameObject * > m_objectList;

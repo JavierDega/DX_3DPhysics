@@ -2,6 +2,7 @@
 #define PHYSICSYSTEM_H_
 #include "System.h"
 #include "RigidbodyComponent.h"
+#include "OrientedBoundingBox.h"
 
 typedef struct SettingStr {
 	std::wstring log;
@@ -43,6 +44,14 @@ public:
 	AABB ComputeAABB(RigidbodyComponent * rb);
 	//@NarrowPhase
 	bool NarrowPhase(RigidbodyComponent * rb1, RigidbodyComponent *rb2, float dt );
+	
+	///@Test intersection queries
+	bool SphereToSphere(RigidbodyComponent * rb1, RigidbodyComponent * rb2, float dt);
+	bool SphereToOBB(RigidbodyComponent * rb1, RigidbodyComponent * rb2, float dt );
+	bool OBBToOBB(RigidbodyComponent * rb1, RigidbodyComponent * rb2, float dt );
+	//@Helpful queries
+	// Given point p, return point q on (or in) OBB b, closest to p 
+	DirectX::SimpleMath::Vector3 ClosestPtPointOBB(DirectX::SimpleMath::Vector3 p, OrientedBoundingBox * b, DirectX::SimpleMath::Vector3 bc, DirectX::SimpleMath::Quaternion bRot);
 
 	//Variables
 	//@Timestep
@@ -58,6 +67,10 @@ public:
 	Setting m_AABBCulling;
 	Setting m_sphereCulling;
 	//Medium phase
+
+	//@Debug
+	bool m_stepMode;
+	bool m_stepOnce;
 
 };
 #endif /*PHYSICSYSTEM_H_*/

@@ -38,7 +38,6 @@
 #else
 #include <dxgi1_5.h>
 #endif
-
 #include <DirectXMath.h>
 #include <DirectXColors.h>
 
