@@ -175,7 +175,21 @@ bool PhysicSystem::BroadPhase(RigidbodyComponent * rb1, RigidbodyComponent * rb2
 		float thisFront = box1.m_center.z + box1.m_halfExtent.z; float otherFront = box2.m_center.z + box2.m_halfExtent.z;
 		float thisBack = box1.m_center.z - box1.m_halfExtent.z; float otherBack = box2.m_center.z - box2.m_halfExtent.z;
 
-		if (!(
+		if (thisRight < otherLeft || thisLeft > otherRight)
+			return false;
+
+		if ( thisTop < otherBottom || thisBottom > otherTop )
+			return false;
+
+		if ( thisFront < otherBack || thisBack > otherFront)
+			return false;
+			
+		//@Otherwise
+		rb1->m_shape->m_AABBColor = Colors::Yellow;
+		rb2->m_shape->m_AABBColor = Colors::Yellow;
+		return true;
+
+		/*if (!(
 			thisRight < otherLeft
 			|| thisLeft > otherRight
 			|| thisTop < otherBottom
@@ -191,7 +205,7 @@ bool PhysicSystem::BroadPhase(RigidbodyComponent * rb1, RigidbodyComponent * rb2
 		}
 		else {
 			return false;
-		}
+		}*/
 	}
 
 	//Default: if BroadPhase is disabled
@@ -299,7 +313,6 @@ bool PhysicSystem::SphereToSphere(RigidbodyComponent * rb1, RigidbodyComponent *
 	//@Cases?
 	//Resting contact, moving contact, contact vs kinematic
 	//@Impulse based collision response
-	if (!(sphere1 && sphere2))return false;
 	//@1:Are they colliding?
 	float distSq = Vector3::DistanceSquared(t1->m_position, t2->m_position);
 	// Calculate the sum of the radii, then square it
@@ -422,9 +435,94 @@ bool PhysicSystem::SphereToOBB(RigidbodyComponent * rb1, RigidbodyComponent * rb
 
 	if (v.LengthSquared() <= sphere1->m_radius * sphere1->m_radius) {
 		//@They collide
-		//@1:Displacement
-		//@2:Dynamic collision resolution
-		//@3:Friction
+				//@Impulse based collision resolution
+		///1:Displacement
+#pragma region Displacement
+
+		//Calculate overlap
+		float overlap = ( sphere1->m_radius - v.Length()  );//@Should always be positive value
+		//@Static collision resolution based on speed
+		float v1Length = rb1->m_velocity.Length();
+		float v2Length = rb2->m_velocity.Length();
+		//@What if two objects with no velocity just collided?
+		float v1Ratio = v1Length / (v1Length + v2Length);
+		float v2Ratio = v2Length / (v1Length + v2Length);
+
+		//@We want to keep values for accurate displacement
+		Vector3 pos1Prev = t1->m_position;
+		Vector3 pos2Prev = t2->m_position;
+		Vector3 contactToSphere = t1->m_position - closestPoint;
+		contactToSphere.Normalize();
+		Vector3 contactToOBB = t2->m_position - closestPoint;
+		contactToOBB.Normalize();
+
+		//Displace taking previous velocities into account
+		if (!rb1->m_isKinematic)t1->m_position += v1Ratio * overlap * contactToSphere;
+		if (!rb2->m_isKinematic)t2->m_position += v2Ratio * overlap * contactToOBB;
+#pragma endregion
+		
+		///2:Dynamic resolution
+#pragma region Resolution
+
+		// First, find the normalized vector n from the center of 
+		// circle1 to the center of circle2
+
+		// Find the length of the component of each of the movement
+		// vectors along n. 
+		// a1 = v1 . n
+		// a2 = v2 . n
+		Vector3 normal = t1->m_position - t2->m_position;
+		normal.Normalize();
+
+		float a1 = rb1->m_velocity.Dot(normal);
+		float a2 = rb2->m_velocity.Dot(normal);
+
+		// Using the optimized version, 
+		// optimizedP =  2(a1 - a2)
+		//              -----------
+		//                m1 + m2
+		float optimizedP = (2.0f * (a1 - a2)) / (rb1->m_mass + rb2->m_mass);
+
+		//@Store previous velocity
+		Vector3 prevVel = rb1->m_velocity;
+		Vector3 prevVel2 = rb2->m_velocity;
+
+		// Calculate v1', the new movement vector of circle1
+		// v1' = v1 - optimizedP * m2 * n
+		rb1->m_velocity = rb1->m_velocity - optimizedP * rb2->m_mass * normal;
+		rb2->m_velocity = rb2->m_velocity + optimizedP * rb1->m_mass * normal;
+
+#pragma endregion
+
+		Vector3 velDelta = rb1->m_velocity - prevVel;
+		Vector3 velDelta2 = rb2->m_velocity - prevVel2;
+
+		//3: Friction::Because of our Impulse based resolution, we need to calculate the normal force 'After the fact'
+#pragma region Kinetic friction
+
+		//@Friction:
+		//Calculate normal force from impulse
+		//f = m*a
+		//f = mdv/dt
+		Vector3 rb1Force = rb1->m_mass * velDelta / dt;
+		//Find component of force along normal
+		float normalForce = rb1Force.Dot(normal);//@DX11's Dot is unnornalized so already multiplied by length
+
+		Vector3 rb2Force = rb2->m_mass * velDelta2 / dt;
+		float normal2Force = rb2Force.Dot(normal);
+
+		Vector3 vel1Norm = rb1->m_velocity;
+		vel1Norm.Normalize();
+		Vector3 vel2Norm = rb2->m_velocity;
+		vel2Norm.Normalize();
+
+		Vector3 friction1 = -vel1Norm * m_frictionCoefficient * abs(normalForce);//normalForce should be positive here
+		rb1->m_force += friction1;
+
+		Vector3 friction2 = -vel2Norm * m_frictionCoefficient * abs(normal2Force);//normal2Force should be negative here
+		rb2->m_force += friction2;
+#pragma endregion
+		
 		return true;
 	}
 	return false;
