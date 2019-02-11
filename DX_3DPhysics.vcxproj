@@ -163,6 +163,7 @@
     <ClInclude Include="Headers\GameObject.h" />
     <ClInclude Include="Headers\GraphicSystem.h" />
     <ClInclude Include="Headers\InputSystem.h" />
+    <ClInclude Include="Headers\ContactSolver.h" />
     <ClInclude Include="Headers\ObjectSystem.h" />
     <ClInclude Include="Headers\OrientedBoundingBox.h" />
     <ClInclude Include="Headers\PhysicSystem.h" />
@@ -189,6 +190,7 @@
     <ClCompile Include="Sources\GameObject.cpp" />
     <ClCompile Include="Sources\GraphicSystem.cpp" />
     <ClCompile Include="Sources\InputSystem.cpp" />
+    <ClCompile Include="Sources\ContactSolver.cpp" />
     <ClCompile Include="Sources\ObjectSystem.cpp" />
     <ClCompile Include="Sources\OrientedBoundingBox.cpp" />
     <ClCompile Include="Sources\PhysicSystem.cpp" />

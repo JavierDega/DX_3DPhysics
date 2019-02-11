@@ -25,7 +25,7 @@ GraphicSystem * GraphicSystem::GetInstance()
 
 //Constructor
 GraphicSystem::GraphicSystem() 
-	: m_pitch(0), m_yaw(0), m_cam(Vector3::Zero), m_look(Vector3::Forward)
+	: m_pitch(0), m_yaw(3.14), m_cam(Vector3::Zero), m_look(Vector3::Forward)
 {
 
 }

@@ -1,6 +1,7 @@
 #ifndef PHYSICSYSTEM_H_
 #define PHYSICSYSTEM_H_
 #include "System.h"
+#include "ContactSolver.h"
 #include "RigidbodyComponent.h"
 #include "OrientedBoundingBox.h"
 
@@ -44,7 +45,7 @@ public:
 	AABB ComputeAABB(RigidbodyComponent * rb);
 	//@NarrowPhase
 	bool NarrowPhase(RigidbodyComponent * rb1, RigidbodyComponent *rb2, float dt );
-	
+	void ApplyImpulse(DirectX::SimpleMath::Vector3 impulse, DirectX::SimpleMath::Vector3 contactVector);
 	///@Test intersection queries
 	bool SphereToSphere(RigidbodyComponent * rb1, RigidbodyComponent * rb2, float dt);
 	bool SphereToOBB(RigidbodyComponent * rb1, RigidbodyComponent * rb2, float dt );
@@ -54,12 +55,13 @@ public:
 	DirectX::SimpleMath::Vector3 ClosestPtPointOBB(DirectX::SimpleMath::Vector3 p, OrientedBoundingBox * b, DirectX::SimpleMath::Vector3 bc, DirectX::SimpleMath::Quaternion bRot);
 
 	//Variables
+	//@Solver
+	ContactSolver m_solver;
 	//@Timestep
 	float m_minDt;
 	float m_accumulator;
 	//@Simulation settings
 	DirectX::SimpleMath::Vector3 m_gravity;
-	float m_frictionCoefficient;//@Same for all objects?
 	float m_airViscosity;
 	std::wstring m_fps;
 	//Space subdivision

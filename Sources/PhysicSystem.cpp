@@ -26,13 +26,12 @@ PhysicSystem::PhysicSystem()
 	m_gravity = Vector3 ( 0, -9.8f, 0 );//@Relative to mass
 	//Viscosity for earth's air @  0'Celsius = 1.33*10^-5 kg/ms^2
 	m_airViscosity = 0.133f;
-	m_frictionCoefficient = .01f;
 	m_minDt = 1.0f / 60.0f;
 	m_accumulator = 0;
 	m_AABBCulling.isEnabled = true;
 	m_sphereCulling.isEnabled = false;
 	m_stepOnce = false;
-	m_stepMode = false;
+	m_stepMode = true;
 }
 //Destructor
 PhysicSystem::~PhysicSystem()
@@ -96,17 +95,19 @@ void PhysicSystem::Reset()
 {
 	//@What do here?
 }
-///Utility
-///Physics loop
+//Physics loop
 void PhysicSystem::UpdatePhysics(float dt) {
+
 	vector<RigidbodyComponent*> m_rigidbodies = ObjectSystem::GetInstance()->GetRigidbodyComponentList();
-	vector<pair<RigidbodyComponent*, RigidbodyComponent*>> m_collidingPairs;
+	vector<pair<RigidbodyComponent*, RigidbodyComponent*>> m_pairs;
 
 	//@Clear debug colors
 	for (RigidbodyComponent* rb : m_rigidbodies){
 		rb->m_shape->m_AABBColor = Colors::Red;
 		rb->m_shape->m_sphereColor = Colors::Red;
-	}	
+	}
+	//@Clear contact manifolds (Naive approach? Might be throwing away useful info?)
+	m_solver.m_collidingPairs.clear();
 
 	//@First loop: Integration + First culling algorithm
 	for (unsigned int i = 0; i < m_rigidbodies.size(); i++) {
@@ -129,26 +130,23 @@ void PhysicSystem::UpdatePhysics(float dt) {
 		}
 		//Forces are computed every frame
 		currentRb->m_force = Vector3(0, 0, 0);
-
 		//@SSScheme
-
 		//@BroadPhase
 		for (unsigned int j = i + 1; j < m_rigidbodies.size(); j++) {
 			//@To avoid double checks, we only check upwards
-			if(BroadPhase(currentRb, m_rigidbodies[j])) m_collidingPairs.push_back(make_pair(currentRb, m_rigidbodies[j]));
+			if(BroadPhase(currentRb, m_rigidbodies[j])) m_pairs.push_back(make_pair(currentRb, m_rigidbodies[j]));
 		}
 	}
 
 	//@Start nulling out collider pairs
-	
 	//@Medium Phase
-
-	///@Surviving pairs MUST be colliding.
 	
 	//@Narrow Phase
-	for (unsigned int i = 0; i < m_collidingPairs.size(); i++) {
-		NarrowPhase(m_collidingPairs[i].first, m_collidingPairs[i].second, dt);
+	for (unsigned int i = 0; i < m_pairs.size(); i++) {
+		NarrowPhase(m_pairs[i].first, m_pairs[i].second, dt);
 	}
+	///@Surviving pairs have been logged to solver and MUST be colliding
+	m_solver.Solve(dt);
 }
 //@BROADPHASE
 bool PhysicSystem::BroadPhase(RigidbodyComponent * rb1, RigidbodyComponent * rb2) {
@@ -214,53 +212,55 @@ bool PhysicSystem::BroadPhase(RigidbodyComponent * rb1, RigidbodyComponent * rb2
 //Get AABBs from different collider shapes
 AABB PhysicSystem::ComputeAABB(RigidbodyComponent * rb)
 {
-	//Dynamic cast to find shape
-	Sphere* sphere = dynamic_cast<Sphere*>(rb->m_shape);
-	OrientedBoundingBox * obb = dynamic_cast<OrientedBoundingBox*>(rb->m_shape);
 	
 	//@Process AABB information, using necessary TransformComponent info (Rotation?)
-	if (sphere) {
-
-		sphere->m_AABB = AABB{ rb->m_owner->m_transform.m_position, Vector3(sphere->m_radius, sphere->m_radius, sphere->m_radius)};
-	}
-	else if (obb) {
-		#pragma region AABB from OBB
-		/* From Christer Ericson's Real-Time collision detection book (OPTIMIZED WITHOUT CALCULATING BC)
-		// Transform AABB a by the matrix m and translation t, // find maximum extents, and store result into AABB b. 
-		void UpdateAABB(AABB a, float m[3][3], float t[3], AABB &b) 
-		{ 
-			for (int i = 0; i < 3;i++) 
-			{ 
-				b.c[i] = t[i]; 
-				b.r[i] = 0.0f;
-				for (int j = 0; j < 3;j++) 
-				{ 
-					b.c[i] += m[i][j] * a.c[j];
-					b.r[i] += Abs(m[i][j]) * a.r[j];
+	switch (rb->m_shape->m_type) {
+		case ShapeType::SPHERE:
+		{
+			Sphere* sphere = dynamic_cast<Sphere*>(rb->m_shape);
+			sphere->m_AABB = AABB{ rb->m_owner->m_transform.m_position, Vector3(sphere->m_radius, sphere->m_radius, sphere->m_radius) };
+		}
+		break;
+		case ShapeType::OBB:
+		{
+			OrientedBoundingBox * obb = dynamic_cast<OrientedBoundingBox*>(rb->m_shape);
+			#pragma region AABB from OBB
+			/* From Christer Ericson's Real-Time collision detection book (OPTIMIZED WITHOUT CALCULATING BC)
+			// Transform AABB a by the matrix m and translation t, // find maximum extents, and store result into AABB b.
+			void UpdateAABB(AABB a, float m[3][3], float t[3], AABB &b)
+			{
+				for (int i = 0; i < 3;i++)
+				{
+					b.c[i] = t[i];
+					b.r[i] = 0.0f;
+					for (int j = 0; j < 3;j++)
+					{
+						b.c[i] += m[i][j] * a.c[j];
+						b.r[i] += Abs(m[i][j]) * a.r[j];
+					}
 				}
 			}
-		}
-		*/
-		//@People seem to like to do this from matrices, I'm not smart enough to derive another approach for now
-		XMFLOAT4X4 m = Matrix::CreateFromQuaternion(rb->m_owner->m_transform.m_rotation);//m[3][3]
-		//float t[3] = { rb->m_owner->m_transform.m_position.x, rb->m_owner->m_transform.m_position.y, rb->m_owner->m_transform.m_position.z };//t[3], is also a.c
-		float ar[3] = { obb->m_halfExtents.x, obb->m_halfExtents.y, obb->m_halfExtents.z };
-		//float * bc[3] = { &obb->m_AABB.m_center.x, &obb->m_AABB.m_center.y, &obb->m_AABB.m_center.z };// b.c
-		obb->m_AABB.m_center = rb->m_owner->m_transform.m_position;
-		float * br[3] = { &obb->m_AABB.m_halfExtent.x, &obb->m_AABB.m_halfExtent.y, &obb->m_AABB.m_halfExtent.z }; //b.r
+			*/
+			//@People seem to like to do this from matrices, I'm not smart enough to derive another approach for now
+			XMFLOAT4X4 m = Matrix::CreateFromQuaternion(rb->m_owner->m_transform.m_rotation);//m[3][3]
+			//float t[3] = { rb->m_owner->m_transform.m_position.x, rb->m_owner->m_transform.m_position.y, rb->m_owner->m_transform.m_position.z };//t[3], is also a.c
+			float ar[3] = { obb->m_halfExtents.x, obb->m_halfExtents.y, obb->m_halfExtents.z };
+			//float * bc[3] = { &obb->m_AABB.m_center.x, &obb->m_AABB.m_center.y, &obb->m_AABB.m_center.z };// b.c
+			obb->m_AABB.m_center = rb->m_owner->m_transform.m_position;
+			float * br[3] = { &obb->m_AABB.m_halfExtent.x, &obb->m_AABB.m_halfExtent.y, &obb->m_AABB.m_halfExtent.z }; //b.r
 
-		for (int i = 0; i < 3; i++) {
-			//*bc[i] = t[i];
-			*br[i] = 0.0f;
-			for (int j = 0; j < 3; j++) {
-				//*bc[i] += m(i,j) * t[j];
-				*br[i] += abs(m(i, j)) * ar[j];
+			for (int i = 0; i < 3; i++) {
+				//*bc[i] = t[i];
+				*br[i] = 0.0f;
+				for (int j = 0; j < 3; j++) {
+					//*bc[i] += m(i,j) * t[j];
+					*br[i] += abs(m(i, j)) * ar[j];
+				}
 			}
+			#pragma endregion
 		}
-
-		#pragma endregion
+		break;
 	}
-
 	return rb->m_shape->m_AABB;
 }
 //@NARROWPHASE
@@ -303,6 +303,10 @@ bool PhysicSystem::NarrowPhase(RigidbodyComponent * rb1, RigidbodyComponent * rb
 	return false;
 }
 
+void PhysicSystem::ApplyImpulse(DirectX::SimpleMath::Vector3 impulse, DirectX::SimpleMath::Vector3 contactVector)
+{
+}
+
 bool PhysicSystem::SphereToSphere(RigidbodyComponent * rb1, RigidbodyComponent * rb2, float dt)
 {
 	//@At this point it can be a static_cast
@@ -320,91 +324,27 @@ bool PhysicSystem::SphereToSphere(RigidbodyComponent * rb1, RigidbodyComponent *
 	sumRadiiSq *= sumRadiiSq;
 	if (distSq <= sumRadiiSq) {
 		// A and B are touching
-		//@Impulse based collision resolution
-		///1:Displacement
-#pragma region Displacement
-		
-		//Calculate overlap
+		///Create manifold and contact point
+		//We provide generic info such as: Necessary contact points, each with penetration depth scalar, a common normal vector, and rigidbodies involved.
+		//@CONVENTION: Normal always points to first rigidbody pair.
+		//@Overlap is always positive
 		float dist = sqrtf(distSq);
-		float overlap = (dist - sphere1->m_radius - sphere2->m_radius);
-		//@Static collision resolution based on speed
-		float v1Length = rb1->m_velocity.Length();
-		float v2Length = rb2->m_velocity.Length();
-		//@What if two objects with no velocity just collided?
-		float v1Ratio = v1Length / (v1Length + v2Length);
-		float v2Ratio = v2Length / (v1Length + v2Length);
+		float overlap = (sphere1->m_radius + sphere2->m_radius - dist);
+		Vector3 normal = (t1->m_position - t2->m_position) / dist;
+		//@Dirk Gregorious: Contact point is middle point of two surfaces
+		Vector3 surfacePoint1 = t1->m_position - normal * sphere1->m_radius;
+		Vector3 surfacePoint2 = t2->m_position + normal * sphere2->m_radius;
 
-		//@We want to keep values for accurate displacement
-		Vector3 pos1Prev = t1->m_position;
-		Vector3 pos2Prev = t2->m_position;
+		ContactPoint contactPoint;
+		contactPoint.m_penetration = overlap;
+		contactPoint.m_position = surfacePoint1 + (surfacePoint2 - surfacePoint1)*0.5f;
 
-		if (!rb1->m_isKinematic)t1->m_position -= v1Ratio * overlap * (pos1Prev - pos2Prev) / dist;
-		if (!rb2->m_isKinematic)t2->m_position += v2Ratio * overlap * (pos1Prev - pos2Prev) / dist;
-#pragma endregion
-
-		///2:Dynamic resolution
-#pragma region Resolution
-
-		//http://www.gamasutra.com/view/feature/131424/pool_hall_lessons_fast_accurate_.php?page=3
-		// First, find the normalized vector n from the center of 
-		// circle1 to the center of circle2
-
-		// Find the length of the component of each of the movement
-		// vectors along n. 
-		// a1 = v1 . n
-		// a2 = v2 . n
-		Vector3 normal = t1->m_position - t2->m_position;
-		normal.Normalize();
-
-		float a1 = rb1->m_velocity.Dot(normal);
-		float a2 = rb2->m_velocity.Dot(normal);
-
-		// Using the optimized version, 
-		// optimizedP =  2(a1 - a2)
-		//              -----------
-		//                m1 + m2
-		float optimizedP = (2.0f * (a1 - a2)) / (rb1->m_mass + rb2->m_mass);
-
-		//@Store previous velocity
-		Vector3 prevVel = rb1->m_velocity;
-		Vector3 prevVel2 = rb2->m_velocity;
-
-		// Calculate v1', the new movement vector of circle1
-		// v1' = v1 - optimizedP * m2 * n
-		rb1->m_velocity = rb1->m_velocity - optimizedP * rb2->m_mass * normal;
-		rb2->m_velocity = rb2->m_velocity + optimizedP * rb1->m_mass * normal;
-
-#pragma endregion
-
-		Vector3 velDelta = rb1->m_velocity - prevVel;
-		Vector3 velDelta2 = rb2->m_velocity - prevVel2;
-
-		//3: Friction::Because of our Impulse based resolution, we need to calculate the normal force 'After the fact'
-#pragma region Kinetic friction
-
-		//@Friction:
-		//Calculate normal force from impulse
-		//f = m*a
-		//f = mdv/dt
-		Vector3 rb1Force = rb1->m_mass * velDelta / dt;
-		//Find component of force along normal
-		float normalForce = rb1Force.Dot(normal);//@DX11's Dot is unnornalized so already multiplied by length
-
-		Vector3 rb2Force = rb2->m_mass * velDelta2 / dt;
-		float normal2Force = rb2Force.Dot(normal);
-
-		Vector3 vel1Norm = rb1->m_velocity;
-		vel1Norm.Normalize();
-		Vector3 vel2Norm = rb2->m_velocity;
-		vel2Norm.Normalize();
-
-		Vector3 friction1 = -vel1Norm * m_frictionCoefficient * abs(normalForce);//normalForce should be positive here
-		rb1->m_force += friction1;
-
-		Vector3 friction2 = -vel2Norm * m_frictionCoefficient * abs(normal2Force);//normal2Force should be negative here
-		rb2->m_force += friction2;
-#pragma endregion
-
+		ContactManifold manifold;
+		manifold.m_rigidbodies.first = rb1;
+		manifold.m_rigidbodies.second = rb2;
+		manifold.m_points.push_back(contactPoint);
+		manifold.m_normal = normal;
+		m_solver.m_collidingPairs.push_back(manifold);
 		return true;
 	}
 	return false;
@@ -431,98 +371,29 @@ bool PhysicSystem::SphereToOBB(RigidbodyComponent * rb1, RigidbodyComponent * rb
 	}
 	*/
 	Vector3 closestPoint = ClosestPtPointOBB(t1->m_position, obb2, t2->m_position, t2->m_rotation);//Point &p;
-	Vector3 v = closestPoint - t1->m_position;//v;
-
-	if (v.LengthSquared() <= sphere1->m_radius * sphere1->m_radius) {
-		//@They collide
-				//@Impulse based collision resolution
-		///1:Displacement
-#pragma region Displacement
-
+	Vector3 v = t1->m_position - closestPoint;//v;
+	float distSq = v.LengthSquared();
+	if (distSq <= sphere1->m_radius * sphere1->m_radius) {
+		// A and B are touching
+		///Create manifold and contact point
+		//We provide generic info such as: Necessary contact points, each with penetration depth scalar, a common normal vector, and rigidbodies involved.
+		//@CONVENTION: Normal always points to first rigidbody pair.
+		//@Overlap is always positive
 		//Calculate overlap
-		float overlap = ( sphere1->m_radius - v.Length()  );//@Should always be positive value
-		//@Static collision resolution based on speed
-		float v1Length = rb1->m_velocity.Length();
-		float v2Length = rb2->m_velocity.Length();
-		//@What if two objects with no velocity just collided?
-		float v1Ratio = v1Length / (v1Length + v2Length);
-		float v2Ratio = v2Length / (v1Length + v2Length);
+		float dist = sqrtf(distSq);
+		float overlap = ( sphere1->m_radius - dist  );//@Should always be positive value
+		Vector3 normal = v/dist;
+		ContactPoint contactPoint;
+		contactPoint.m_penetration = overlap;
+		contactPoint.m_position = closestPoint;
 
-		//@We want to keep values for accurate displacement
-		Vector3 pos1Prev = t1->m_position;
-		Vector3 pos2Prev = t2->m_position;
-		Vector3 contactToSphere = t1->m_position - closestPoint;
-		contactToSphere.Normalize();
-		Vector3 contactToOBB = t2->m_position - closestPoint;
-		contactToOBB.Normalize();
+		ContactManifold manifold;
+		manifold.m_rigidbodies.first = rb1;
+		manifold.m_rigidbodies.second = rb2;
+		manifold.m_points.push_back(contactPoint);
+		manifold.m_normal = normal;
+		m_solver.m_collidingPairs.push_back(manifold);
 
-		//Displace taking previous velocities into account
-		if (!rb1->m_isKinematic)t1->m_position += v1Ratio * overlap * contactToSphere;
-		if (!rb2->m_isKinematic)t2->m_position += v2Ratio * overlap * contactToOBB;
-#pragma endregion
-		
-		///2:Dynamic resolution
-#pragma region Resolution
-
-		// First, find the normalized vector n from the center of 
-		// circle1 to the center of circle2
-
-		// Find the length of the component of each of the movement
-		// vectors along n. 
-		// a1 = v1 . n
-		// a2 = v2 . n
-		Vector3 normal = t1->m_position - t2->m_position;
-		normal.Normalize();
-
-		float a1 = rb1->m_velocity.Dot(normal);
-		float a2 = rb2->m_velocity.Dot(normal);
-
-		// Using the optimized version, 
-		// optimizedP =  2(a1 - a2)
-		//              -----------
-		//                m1 + m2
-		float optimizedP = (2.0f * (a1 - a2)) / (rb1->m_mass + rb2->m_mass);
-
-		//@Store previous velocity
-		Vector3 prevVel = rb1->m_velocity;
-		Vector3 prevVel2 = rb2->m_velocity;
-
-		// Calculate v1', the new movement vector of circle1
-		// v1' = v1 - optimizedP * m2 * n
-		rb1->m_velocity = rb1->m_velocity - optimizedP * rb2->m_mass * normal;
-		rb2->m_velocity = rb2->m_velocity + optimizedP * rb1->m_mass * normal;
-
-#pragma endregion
-
-		Vector3 velDelta = rb1->m_velocity - prevVel;
-		Vector3 velDelta2 = rb2->m_velocity - prevVel2;
-
-		//3: Friction::Because of our Impulse based resolution, we need to calculate the normal force 'After the fact'
-#pragma region Kinetic friction
-
-		//@Friction:
-		//Calculate normal force from impulse
-		//f = m*a
-		//f = mdv/dt
-		Vector3 rb1Force = rb1->m_mass * velDelta / dt;
-		//Find component of force along normal
-		float normalForce = rb1Force.Dot(normal);//@DX11's Dot is unnornalized so already multiplied by length
-
-		Vector3 rb2Force = rb2->m_mass * velDelta2 / dt;
-		float normal2Force = rb2Force.Dot(normal);
-
-		Vector3 vel1Norm = rb1->m_velocity;
-		vel1Norm.Normalize();
-		Vector3 vel2Norm = rb2->m_velocity;
-		vel2Norm.Normalize();
-
-		Vector3 friction1 = -vel1Norm * m_frictionCoefficient * abs(normalForce);//normalForce should be positive here
-		rb1->m_force += friction1;
-
-		Vector3 friction2 = -vel2Norm * m_frictionCoefficient * abs(normal2Force);//normal2Force should be negative here
-		rb2->m_force += friction2;
-#pragma endregion
-		
 		return true;
 	}
 	return false;
@@ -532,12 +403,13 @@ bool PhysicSystem::OBBToOBB(RigidbodyComponent * rb1, RigidbodyComponent * rb2, 
 {
 	OrientedBoundingBox * obb1 = dynamic_cast<OrientedBoundingBox*>(rb1->m_shape);
 	OrientedBoundingBox * obb2 = dynamic_cast<OrientedBoundingBox*>(rb2->m_shape);
+
 	return false;
 }
 ///@Helpful queries
 DirectX::SimpleMath::Vector3 PhysicSystem::ClosestPtPointOBB( Vector3 p, OrientedBoundingBox * b, Vector3 bc, Quaternion bRot)
 {
-	/*
+	/*From Christer Ericson's Real-Time Collision Detection
 	// Given point p, return point q on (or in) OBB b, closest to p 
 	void ClosestPtPointOBB(Point p, OBB b, Point &q) 
 	{ 
@@ -569,7 +441,6 @@ DirectX::SimpleMath::Vector3 PhysicSystem::ClosestPtPointOBB( Vector3 p, Oriente
 	closestPoint = bc;
 	for (int i = 0; i < 3; i++) {
 		float dist = d.Dot(bu[i]);
-		
 		if (dist > be[i]) dist = be[i];
 		if (dist < -be[i]) dist = -be[i];
 		closestPoint += dist * bu[i];

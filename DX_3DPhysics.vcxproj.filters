@@ -69,6 +69,9 @@
     <ClInclude Include="Headers\OrientedBoundingBox.h">
       <Filter>Headers\Shapes</Filter>
     </ClInclude>
+    <ClInclude Include="Headers\ContactSolver.h">
+      <Filter>Headers</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="pch.cpp" />
@@ -115,6 +118,9 @@
     </ClCompile>
     <ClCompile Include="Sources\OrientedBoundingBox.cpp">
       <Filter>Sources\Shapes</Filter>
+    </ClCompile>
+    <ClCompile Include="Sources\ContactSolver.cpp">
+      <Filter>Sources</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
