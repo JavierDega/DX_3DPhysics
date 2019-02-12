@@ -23,7 +23,6 @@ void ContactSolver::Solve(float dt)
 		//@CONVENTION: Normal always points to first rigidbody pair.
 		//@Overlap is always positive
 		//@Impulse based collision resolution
-
 		RigidbodyComponent * rb1 = manifold.m_rigidbodies.first;
 		RigidbodyComponent * rb2 = manifold.m_rigidbodies.second;
 		TransformComponent * t1 = &rb1->m_owner->m_transform;

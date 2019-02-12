@@ -30,7 +30,7 @@ ObjectSystem::~ObjectSystem() {
 void ObjectSystem::Initialize(ID3D11Device1* device, ID3D11DeviceContext1 * deviceContext)
 {
 	//@What do here? LoadSceneOne
-	LoadScene(0);
+	LoadScene(1);
 }
 void ObjectSystem::InitWindow(D3D11_VIEWPORT screenViewport)
 {
@@ -203,25 +203,31 @@ void ObjectSystem::LoadScene( unsigned int index)
 		case 1:
 		{
 			//Build OrientedBoundingBoxes, check aabbs
-			GameObject * myObb = new GameObject("OBB", Vector3( 5, -12.45, -10.f ), Quaternion::CreateFromAxisAngle(Vector3(0,0,1), 1.57f));
+			GameObject * myObb = new GameObject("OBB", Vector3( 5, -12.45, -10.f ), Quaternion::CreateFromAxisAngle(Vector3(1, 0.25, 1), 1.57f));
 			myObb->AddComponent(new RigidbodyComponent( Vector3(1.231,15,10), 10.f, true ));
 			AddObject(myObb);
 
-			GameObject * mySphere2 = new GameObject("Sphere2", Vector3( 1, 4, -10.f));
+			/*GameObject * mySphere2 = new GameObject("Sphere2", Vector3( 1, 4, -10.f));
 			mySphere2->AddComponent(new RigidbodyComponent(0.5f, 10.f, false));
-			AddObject(mySphere2);
+			AddObject(mySphere2);*/
 
-			GameObject * myObb3 = new GameObject("OBB3", Vector3(0, 1, -10.f), Quaternion::CreateFromAxisAngle(Vector3(0, 0, 1), 0.1f));
+			GameObject * myObb3 = new GameObject("OBB3", Vector3(0, 1, -10.f), Quaternion::CreateFromAxisAngle(Vector3(1, 0, 1), 0.1f));
 			RigidbodyComponent * rb3 = new RigidbodyComponent(Vector3(5, 1, 1), 10.f, false);
 			rb3->m_force += Vector3(0, 5000, 0);
 			myObb3->AddComponent(rb3);
 			AddObject(myObb3);
 
-			GameObject * mySphere4 = new GameObject("Sphere4", Vector3( -5, 5, -10.f));
+			/*GameObject * mySphere4 = new GameObject("Sphere4", Vector3( -5, 5, -10.f));
 			RigidbodyComponent * rb4 = new RigidbodyComponent(2.f, 100.f, false, Colors::Bisque);
 			rb4->m_force += Vector3( 1000, 0, 0);
 			mySphere4->AddComponent(rb4);
-			AddObject(mySphere4);
+			AddObject(mySphere4);*/
+
+			GameObject * myObb5 = new GameObject("OBB5", Vector3(-10, 1, -10.f), Quaternion::CreateFromAxisAngle(Vector3(0, 0.5, 1), 2.5f));
+			RigidbodyComponent * rb5 = new RigidbodyComponent(Vector3(2, 3, 2), 15.f, false);
+			rb5->m_force += Vector3(1000, 5000, 0);
+			myObb5->AddComponent(rb5);
+			AddObject(myObb5);
 
 		}
 		break;

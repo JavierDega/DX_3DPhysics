@@ -401,10 +401,173 @@ bool PhysicSystem::SphereToOBB(RigidbodyComponent * rb1, RigidbodyComponent * rb
 
 bool PhysicSystem::OBBToOBB(RigidbodyComponent * rb1, RigidbodyComponent * rb2, float dt)
 {
-	OrientedBoundingBox * obb1 = dynamic_cast<OrientedBoundingBox*>(rb1->m_shape);
-	OrientedBoundingBox * obb2 = dynamic_cast<OrientedBoundingBox*>(rb2->m_shape);
+	//@Add Manifold Generation
 
-	return false;
+	/* Christer Ericson's Real-Time collision detection
+	int TestOBBOBB(OBB &a, OBB &b) {
+		float ra, rb; 
+		Matrix33 R, AbsR;
+		// Compute rotation matrix expressing b in a’s coordinate frame 
+		for (int i = 0; i < 3;i++) 
+			for (int j = 0; j < 3;j++) 
+				R[i][j] = Dot(a.u[i], b.u[j]);
+
+		// Compute translation vector t 
+		Vector t = b.c - a.c; 
+		// Bring translation into a’s coordinate frame 
+		t = Vector(Dot(t, a.u[0]), Dot(t, a.u[2]), Dot(t, a.u[2]));
+		// Compute common subexpressions. Add in an epsilon term to 
+		// counteract arithmetic errors when two edges are parallel and 
+		// their cross product is (near) null (see text for details) 
+		for (int i = 0; i < 3;i++) 
+			for (int j = 0; j < 3;j++) 
+				AbsR[i][j] = Abs(R[i][j]) + EPSILON;
+		// Test axes L = A0, L = A1, L = A2 
+		for (int i = 0; i < 3;i++) 
+		{ 
+			ra = a.e[i]; 
+			rb = b.e[0] * AbsR[i][0] + b.e[1] * AbsR[i][1] + b.e[2] * AbsR[i][2];
+			if (Abs(t[i]) > ra + rb) return 0;
+		}
+		// Test axes L = B0, L = B1, L = B2 
+		for (int i = 0; i < 3;i++) 
+		{ 
+			ra = a.e[0] * AbsR[0][i] + a.e[1] * AbsR[1][i] + a.e[2] * AbsR[2][i]; 
+			rb = b.e[i];
+			if (Abs(t[0] * R[0][i] + t[1] * R[1][i] + t[2] * R[2][i]) > ra + rb) return 0;
+		}
+		// Test axis L = A0 x B0 
+		ra = a.e[1] * AbsR[2][0] + a.e[2] * AbsR[1][0];
+		rb = b.e[1] * AbsR[0][2] + b.e[2] * AbsR[0][1];
+		if (Abs(t[2] * R[1][0] - t[1] * R[2][0]) > ra + rb) return 0;
+		// Test axis L = A0 x B1 
+		ra = a.e[1] * AbsR[2][1] + a.e[2] * AbsR[1][1];
+		rb = b.e[0] * AbsR[0][2] + b.e[2] * AbsR[0][0];
+		if (Abs(t[2] * R[1][1] - t[1] * R[2][1]) > ra + rb) return 0;
+		// Test axis L = A0 x B2 
+		ra = a.e[1] * AbsR[2][2] + a.e[2] * AbsR[1][2];
+		rb = b.e[0] * AbsR[0][1] + b.e[1] * AbsR[0][0];
+		if (Abs(t[2] * R[1][2] - t[1] * R[2][2]) > ra + rb) return 0;
+		// Test axis L = A1 x B0 
+		ra = a.e[0] * AbsR[2][0] + a.e[2] * AbsR[0][0];
+		rb = b.e[1] * AbsR[1][2] + b.e[2] * AbsR[1][1];
+		if (Abs(t[0] * R[2][0] - t[2] * R[0][0]) > ra + rb) return 0;
+		// Test axis L = A1 x B1 
+		ra = a.e[0] * AbsR[2][1] + a.e[2] * AbsR[0][1];
+		rb = b.e[0] * AbsR[1][2] + b.e[2] * AbsR[1][0];
+		if (Abs(t[0] * R[2][1] - t[2] * R[0][1]) > ra + rb) return 0;
+		// Test axis L = A1 x B2 
+		ra = a.e[0] * AbsR[2][2] + a.e[2] * AbsR[0][2];
+		rb = b.e[0] * AbsR[1][1] + b.e[1] * AbsR[1][0];
+		if (Abs(t[0] * R[2][2] - t[2] * R[0][2]) > ra + rb) return 0;
+		// Test axis L = A2 x B0 
+		ra = a.e[0] * AbsR[1][0] + a.e[1] * AbsR[0][0];
+		rb = b.e[1] * AbsR[2][2] + b.e[2] * AbsR[2][1];
+		if (Abs(t[1] * R[0][0] - t[0] * R[1][0]) > ra + rb) return 0;
+		// Test axis L = A2 x B1 
+		ra = a.e[0] * AbsR[1][1] + a.e[1] * AbsR[0][1];
+		rb = b.e[0] * AbsR[2][2] + b.e[2] * AbsR[2][0];
+		if (Abs(t[1] * R[0][1] - t[0] * R[1][1]) > ra + rb) return 0;
+		// Test axis L = A2 x B2 
+		ra = a.e[0] * AbsR[1][2] + a.e[1] * AbsR[0][2];
+		rb = b.e[0] * AbsR[2][1] + b.e[1] * AbsR[2][0]; 
+		if (Abs(t[1] * R[0][2] - t[0] * R[1][2]) > ra + rb) return 0;
+		// Since no separating axis is found, the OBBs must be intersecting 
+		return 1;
+	}
+	*/
+	OrientedBoundingBox * a = dynamic_cast<OrientedBoundingBox*>(rb1->m_shape);//a
+	OrientedBoundingBox * b = dynamic_cast<OrientedBoundingBox*>(rb2->m_shape);//b
+	float ra, rb;
+	Matrix R, AbsR;
+	//.u are the local x,y,z axes
+	//.e are the halfExtents
+	Matrix ma = Matrix::CreateFromQuaternion(rb1->m_owner->m_transform.m_rotation);
+	Vector3 au[3] = { ma.Right(), ma.Up(), ma.Forward() };//a.u
+	float ae[3] = { a->m_halfExtents.x, a->m_halfExtents.y, a->m_halfExtents.z };
+
+	Matrix mb = Matrix::CreateFromQuaternion(rb2->m_owner->m_transform.m_rotation);
+	Vector3 bu[3] = { mb.Right(), mb.Up(), mb.Forward() };//b.u
+	float be[3] = { b->m_halfExtents.x, b->m_halfExtents.y, b->m_halfExtents.z };
+
+	// Compute rotation matrix expressing b in a’s coordinate frame 
+	for (int i = 0; i < 3; i++)
+		for (int j = 0; j < 3; j++)
+			R.m[i][j] = au[i].Dot(bu[j]);
+
+	// Compute translation vector t 
+	Vector3 tv = rb2->m_owner->m_transform.m_position - rb1->m_owner->m_transform.m_position;
+	// Bring translation into a’s coordinate frame 
+	float t[3] = { tv.Dot(au[0]), tv.Dot(au[1]), tv.Dot(au[2]) };//@POSSIBLE ERRATA
+	// Compute common subexpressions. Add in an epsilon term to 
+	// counteract arithmetic errors when two edges are parallel and 
+	// their cross product is (near) null (see text for details) 
+	for (int i = 0; i < 3; i++)
+		for (int j = 0; j < 3; j++)
+			AbsR.m[i][j] = abs(R.m[i][j]) + FLT_EPSILON;
+
+	// Test axes L = A0, L = A1, L = A2 
+	for (int i = 0; i < 3;i++) 
+	{ 
+		ra = ae[i];
+		rb = be[0] * AbsR.m[i][0] + be[1] * AbsR.m[i][1] + be[2] * AbsR.m[i][2];
+		if (abs(t[i]) > ra + rb) return 0;
+	}
+
+	// Test axes L = B0, L = B1, L = B2 
+	for (int i = 0; i < 3;i++) 
+	{ 
+		ra = ae[0] * AbsR.m[0][i] + ae[1] * AbsR.m[1][i] + ae[2] * AbsR.m[2][i];
+		rb = be[i];
+		if (abs(t[0] * R.m[0][i] + t[1] * R.m[1][i] + t[2] * R.m[2][i]) > ra + rb) return 0;
+	}
+	// Test axis L = A0 x B0 
+	ra = ae[1] * AbsR.m[2][0] + ae[2] * AbsR.m[1][0];
+	rb = be[1] * AbsR.m[0][2] + be[2] * AbsR.m[0][1];
+	if (abs(t[2] * R.m[1][0] - t[1] * R.m[2][0]) > ra + rb) return 0;
+
+	// Test axis L = A0 x B1 
+	ra = ae[1] * AbsR.m[2][1] + ae[2] * AbsR.m[1][1];
+	rb = be[0] * AbsR.m[0][2] + be[2] * AbsR.m[0][0];
+	if (abs(t[2] * R.m[1][1] - t[1] * R.m[2][1]) > ra + rb) return 0;
+
+	// Test axis L = A0 x B2 
+	ra = ae[1] * AbsR.m[2][2] + ae[2] * AbsR.m[1][2];
+	rb = be[0] * AbsR.m[0][1] + be[1] * AbsR.m[0][0];
+	if (abs(t[2] * R.m[1][2] - t[1] * R.m[2][2]) > ra + rb) return 0;
+
+	// Test axis L = A1 x B0 
+	ra = ae[0] * AbsR.m[2][0] + ae[2] * AbsR.m[0][0];
+	rb = be[1] * AbsR.m[1][2] + be[2] * AbsR.m[1][1];
+	if (abs(t[0] * R.m[2][0] - t[2] * R.m[0][0]) > ra + rb) return 0;
+
+	// Test axis L = A1 x B1 
+	ra = ae[0] * AbsR.m[2][1] + ae[2] * AbsR.m[0][1];
+	rb = be[0] * AbsR.m[1][2] + be[2] * AbsR.m[1][0];
+	if (abs(t[0] * R.m[2][1] - t[2] * R.m[0][1]) > ra + rb) return 0;
+
+	// Test axis L = A1 x B2 
+	ra = ae[0] * AbsR.m[2][2] + ae[2] * AbsR.m[0][2];
+	rb = be[0] * AbsR.m[1][1] + be[1] * AbsR.m[1][0];
+	if (abs(t[0] * R.m[2][2] - t[2] * R.m[0][2]) > ra + rb) return 0;
+
+	// Test axis L = A2 x B0 
+	ra = ae[0] * AbsR.m[1][0] + ae[1] * AbsR.m[0][0];
+	rb = be[1] * AbsR.m[2][2] + be[2] * AbsR.m[2][1];
+	if (abs(t[1] * R.m[0][0] - t[0] * R.m[1][0]) > ra + rb) return 0;
+
+	// Test axis L = A2 x B1 
+	ra = ae[0] * AbsR.m[1][1] + ae[1] * AbsR.m[0][1];
+	rb = be[0] * AbsR.m[2][2] + be[2] * AbsR.m[2][0];
+	if (abs(t[1] * R.m[0][1] - t[0] * R.m[1][1]) > ra + rb) return 0;
+
+	// Test axis L = A2 x B2 
+	ra = ae[0] * AbsR.m[1][2] + ae[1] * AbsR.m[0][2];
+	rb = be[0] * AbsR.m[2][1] + be[1] * AbsR.m[2][0];
+	if (abs(t[1] * R.m[0][2] - t[0] * R.m[1][2]) > ra + rb) return 0;
+
+	// Since no separating axis is found, the OBBs must be intersecting
+	return true;
 }
 ///@Helpful queries
 DirectX::SimpleMath::Vector3 PhysicSystem::ClosestPtPointOBB( Vector3 p, OrientedBoundingBox * b, Vector3 bc, Quaternion bRot)
