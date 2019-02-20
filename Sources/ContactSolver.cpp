@@ -36,10 +36,6 @@ void ContactSolver::Solve(float dt)
 		//@What if two objects with no velocity just collided?
 		float v1Ratio = v1Length / (v1Length + v2Length);
 		float v2Ratio = v2Length / (v1Length + v2Length);
-
-		//@We want to keep values for accurate displacement
-		Vector3 pos1Prev = t1->m_position;
-		Vector3 pos2Prev = t2->m_position;
 			
 		float maxOverlap = 0.f;
 		for (ContactPoint cp : manifold.m_points) {
