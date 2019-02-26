@@ -82,7 +82,7 @@ namespace DX
 }
 
 
-//DIRECTXTK DIRECTIVES
+//@@DIRECTXTK DIRECTIVES
 #include "CommonStates.h"
 #include "DDSTextureLoader.h"
 #include "DirectXHelpers.h"

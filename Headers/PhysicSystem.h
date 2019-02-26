@@ -9,7 +9,6 @@ typedef struct SettingStr {
 	std::wstring log;
 	bool isEnabled;
 }Setting;
-
 /*Iterates on all rigidbodies
 Computing timestep, then running:
 Integration update (Semi-euler - Verlet)
@@ -50,9 +49,20 @@ public:
 	bool SphereToSphere(RigidbodyComponent * rb1, RigidbodyComponent * rb2, float dt);
 	bool SphereToOBB(RigidbodyComponent * rb1, RigidbodyComponent * rb2, float dt );
 	bool OBBToOBB(RigidbodyComponent * rb1, RigidbodyComponent * rb2, float dt );
+
 	//@Helpful queries
+	DirectX::SimpleMath::Vector3 QueryOBBEdgeContact(RigidbodyComponent * rb1, RigidbodyComponent * rb2, DirectX::SimpleMath::Vector3 edge1Dir, DirectX::SimpleMath::Vector3 edge2Dir,
+		DirectX::SimpleMath::Vector3 axisOfMinimumPenetration, float penetrationDepth);
 	// Given point p, return point q on (or in) OBB b, closest to p 
 	DirectX::SimpleMath::Vector3 ClosestPtPointOBB(DirectX::SimpleMath::Vector3 p, OrientedBoundingBox * b, DirectX::SimpleMath::Vector3 bc, DirectX::SimpleMath::Quaternion bRot);
+	//Get closest point between two line segments, returns LengthSq between both
+	float ClosestPtSegmentSegment(DirectX::SimpleMath::Vector3 a1, DirectX::SimpleMath::Vector3 a2, DirectX::SimpleMath::Vector3 b1, DirectX::SimpleMath::Vector3 b2,
+		DirectX::SimpleMath::Vector3 & p1, DirectX::SimpleMath::Vector3 & p2, float &f1, float &f2);
+	//Get closest point p to a triangle
+	DirectX::SimpleMath::Vector3 ClosestPtPointTriangle(DirectX::SimpleMath::Vector3 p, DirectX::SimpleMath::Vector3 a, DirectX::SimpleMath::Vector3 b, DirectX::SimpleMath::Vector3 c);
+	//Get closest point p to a tetrahedron defined by four points
+	DirectX::SimpleMath::Vector3 ClosestPtPointTetrahedron(DirectX::SimpleMath::Vector3 p, DirectX::SimpleMath::Vector3 a, DirectX::SimpleMath::Vector3 b, DirectX::SimpleMath::Vector3 c,
+		DirectX::SimpleMath::Vector3 d);
 
 	//Variables
 	//@Solver

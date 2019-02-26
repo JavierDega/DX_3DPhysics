@@ -401,7 +401,6 @@ bool PhysicSystem::SphereToOBB(RigidbodyComponent * rb1, RigidbodyComponent * rb
 
 bool PhysicSystem::OBBToOBB(RigidbodyComponent * rb1, RigidbodyComponent * rb2, float dt)
 {
-	//@Add Manifold Generation
 
 	/* Christer Ericson's Real-Time collision detection
 	int TestOBBOBB(OBB &a, OBB &b) {
@@ -479,6 +478,8 @@ bool PhysicSystem::OBBToOBB(RigidbodyComponent * rb1, RigidbodyComponent * rb2, 
 	OrientedBoundingBox * a = dynamic_cast<OrientedBoundingBox*>(rb1->m_shape);//a
 	OrientedBoundingBox * b = dynamic_cast<OrientedBoundingBox*>(rb2->m_shape);//b
 
+	TransformComponent t1 = rb1->m_owner->m_transform;
+	TransformComponent t2 = rb2->m_owner->m_transform;
 
 	float ra, rb;
 	Matrix R, AbsR;
@@ -497,10 +498,15 @@ bool PhysicSystem::OBBToOBB(RigidbodyComponent * rb1, RigidbodyComponent * rb2, 
 		for (int j = 0; j < 3; j++)
 			R.m[i][j] = au[i].Dot(bu[j]);
 
+	
 	// Compute translation vector t 
 	Vector3 tv = rb2->m_owner->m_transform.m_position - rb1->m_owner->m_transform.m_position;
 	// Bring translation into a’s coordinate frame 
 	float t[3] = { tv.Dot(au[0]), tv.Dot(au[1]), tv.Dot(au[2]) };//@POSSIBLE ERRATA(YUP)
+
+	//@@ALTERNATIVE: Manually detecting degenerate case (When two edges are parallel) and skipping all edge cross product axes if so
+	//It can be proven that not false positives will come in this case https://www.randygaul.net/2014/05/22/deriving-obb-to-obb-intersection-sat/
+
 	// Compute common subexpressions. Add in an epsilon term to 
 	// counteract arithmetic errors when two edges are parallel and 
 	// their cross product is (near) null (see text for details) 
@@ -512,7 +518,11 @@ bool PhysicSystem::OBBToOBB(RigidbodyComponent * rb1, RigidbodyComponent * rb2, 
 	float m_penetrationDepth = FLT_MAX;
 	//@Convention says normals point away from A
 	Vector3 m_axisOfMinimumPenetration;//@Beware of floating point errors when two axis are very similar in penetration, as could be source of jittering
-
+	bool m_isFaceToFaceCollision;
+	bool m_isFace1;//Whether reference face is on shape 1 or 2
+	Vector3 m_edge1Dir, m_edge2Dir;
+	unsigned int m_faceIndex;
+	//@Something to face case (Find incident face, reference face,..)
 	// Test axes L = A0, L = A1, L = A2 
 	for (int i = 0; i < 3;i++) 
 	{ 
@@ -525,10 +535,15 @@ bool PhysicSystem::OBBToOBB(RigidbodyComponent * rb1, RigidbodyComponent * rb2, 
 			if (curPenetration < m_penetrationDepth) {
 				m_penetrationDepth = curPenetration;
 				m_axisOfMinimumPenetration = au[i];
+				m_isFaceToFaceCollision = true;
+				m_isFace1 = true;
+				m_faceIndex = i;
 			}
 		}
 	}
-
+	
+	//For solving in local space, then moving to global
+	Vector3 bRotatedAxes[3] = { AbsR.Right(), AbsR.Up(), AbsR.Forward() };
 	// Test axes L = B0, L = B1, L = B2 
 	for (int i = 0; i < 3;i++) 
 	{ 
@@ -540,10 +555,14 @@ bool PhysicSystem::OBBToOBB(RigidbodyComponent * rb1, RigidbodyComponent * rb2, 
 			float curPenetration = (ra + rb) - abs(t[0] * R.m[0][i] + t[1] * R.m[1][i] + t[2] * R.m[2][i]);
 			if (curPenetration < m_penetrationDepth) {
 				m_penetrationDepth = curPenetration;
-				m_axisOfMinimumPenetration = bu[i];
+				m_axisOfMinimumPenetration = bRotatedAxes[i];
+				m_isFaceToFaceCollision = true;
+				m_isFace1 = false;
+				m_faceIndex = i;
 			}
 		}
 	}
+
 	// Test axis L = A0 x B0 
 	ra = ae[1] * AbsR.m[2][0] + ae[2] * AbsR.m[1][0];
 	rb = be[1] * AbsR.m[0][2] + be[2] * AbsR.m[0][1];
@@ -553,7 +572,10 @@ bool PhysicSystem::OBBToOBB(RigidbodyComponent * rb1, RigidbodyComponent * rb2, 
 		float curPenetration = (ra + rb) - abs(t[2] * R.m[1][0] - t[1] * R.m[2][0]);
 		if (curPenetration < m_penetrationDepth) {
 			m_penetrationDepth = curPenetration;
-			m_axisOfMinimumPenetration = au[0].Cross(bu[0]);
+			m_axisOfMinimumPenetration = au[0].Cross(AbsR.Right());
+			m_isFaceToFaceCollision = false;
+			m_edge1Dir = au[0];
+			m_edge2Dir = AbsR.Right();
 		}
 	}
 
@@ -567,7 +589,10 @@ bool PhysicSystem::OBBToOBB(RigidbodyComponent * rb1, RigidbodyComponent * rb2, 
 		float curPenetration = (ra + rb) - abs(t[2] * R.m[1][1] - t[1] * R.m[2][1]);
 		if (curPenetration < m_penetrationDepth) {
 			m_penetrationDepth = curPenetration;
-			m_axisOfMinimumPenetration = au[0].Cross(bu[1]);
+			m_axisOfMinimumPenetration = au[0].Cross(AbsR.Up());
+			m_isFaceToFaceCollision = false;
+			m_edge1Dir = au[0];
+			m_edge2Dir = AbsR.Up();
 		}
 	}
 
@@ -575,36 +600,113 @@ bool PhysicSystem::OBBToOBB(RigidbodyComponent * rb1, RigidbodyComponent * rb2, 
 	ra = ae[1] * AbsR.m[2][2] + ae[2] * AbsR.m[1][2];
 	rb = be[0] * AbsR.m[0][1] + be[1] * AbsR.m[0][0];
 	if (abs(t[2] * R.m[1][2] - t[1] * R.m[2][2]) > ra + rb) return 0;
+	else {
+		//Non separating axis, record penetration
+		float curPenetration = (ra + rb) - abs(t[2] * R.m[1][2] - t[1] * R.m[2][2]);
+		if (curPenetration < m_penetrationDepth) {
+			m_penetrationDepth = curPenetration;
+			m_axisOfMinimumPenetration = au[0].Cross(AbsR.Forward());
+			m_isFaceToFaceCollision = false;
+			m_edge1Dir = au[0];
+			m_edge2Dir = AbsR.Forward();
+		}
+	}
 
 	// Test axis L = A1 x B0 
 	ra = ae[0] * AbsR.m[2][0] + ae[2] * AbsR.m[0][0];
 	rb = be[1] * AbsR.m[1][2] + be[2] * AbsR.m[1][1];
 	if (abs(t[0] * R.m[2][0] - t[2] * R.m[0][0]) > ra + rb) return 0;
+	else {
+		//Non separating axis, record penetration
+		float curPenetration = (ra + rb) - abs(t[0] * R.m[2][0] - t[2] * R.m[0][0]);
+		if (curPenetration < m_penetrationDepth) {
+			m_penetrationDepth = curPenetration;
+			m_axisOfMinimumPenetration = au[1].Cross(AbsR.Right());
+			m_isFaceToFaceCollision = false;
+			m_edge1Dir = au[1];
+			m_edge2Dir = AbsR.Right();
+		}
+	}
 
 	// Test axis L = A1 x B1 
 	ra = ae[0] * AbsR.m[2][1] + ae[2] * AbsR.m[0][1];
 	rb = be[0] * AbsR.m[1][2] + be[2] * AbsR.m[1][0];
 	if (abs(t[0] * R.m[2][1] - t[2] * R.m[0][1]) > ra + rb) return 0;
+	else {
+		//Non separating axis, record penetration
+		float curPenetration = (ra + rb) - abs(t[0] * R.m[2][1] - t[2] * R.m[0][1]);
+		if (curPenetration < m_penetrationDepth) {
+			m_penetrationDepth = curPenetration;
+			m_axisOfMinimumPenetration = au[1].Cross(AbsR.Up());
+			m_isFaceToFaceCollision = false;
+			m_edge1Dir = au[1];
+			m_edge2Dir = AbsR.Up();
+		}
+	}
 
 	// Test axis L = A1 x B2 
 	ra = ae[0] * AbsR.m[2][2] + ae[2] * AbsR.m[0][2];
 	rb = be[0] * AbsR.m[1][1] + be[1] * AbsR.m[1][0];
 	if (abs(t[0] * R.m[2][2] - t[2] * R.m[0][2]) > ra + rb) return 0;
+	else {
+		//Non separating axis, record penetration
+		float curPenetration = (ra + rb) - abs(t[0] * R.m[2][2] - t[2] * R.m[0][2]);
+		if (curPenetration < m_penetrationDepth) {
+			m_penetrationDepth = curPenetration;
+			m_axisOfMinimumPenetration = au[1].Cross(AbsR.Forward());
+			m_isFaceToFaceCollision = false;
+			m_edge1Dir = au[1];
+			m_edge2Dir = AbsR.Forward();
+		}
+	}
 
 	// Test axis L = A2 x B0 
 	ra = ae[0] * AbsR.m[1][0] + ae[1] * AbsR.m[0][0];
 	rb = be[1] * AbsR.m[2][2] + be[2] * AbsR.m[2][1];
 	if (abs(t[1] * R.m[0][0] - t[0] * R.m[1][0]) > ra + rb) return 0;
+	else {
+		//Non separating axis, record penetration
+		float curPenetration = (ra + rb) - abs(t[1] * R.m[0][0] - t[0] * R.m[1][0]);
+		if (curPenetration < m_penetrationDepth) {
+			m_penetrationDepth = curPenetration;
+			m_axisOfMinimumPenetration = au[2].Cross(AbsR.Right());
+			m_isFaceToFaceCollision = false;
+			m_edge1Dir = au[2];
+			m_edge2Dir = AbsR.Right();
+		}
+	}
 
 	// Test axis L = A2 x B1 
 	ra = ae[0] * AbsR.m[1][1] + ae[1] * AbsR.m[0][1];
 	rb = be[0] * AbsR.m[2][2] + be[2] * AbsR.m[2][0];
 	if (abs(t[1] * R.m[0][1] - t[0] * R.m[1][1]) > ra + rb) return 0;
+	else {
+		//Non separating axis, record penetration
+		float curPenetration = (ra + rb) - abs(t[1] * R.m[0][1] - t[0] * R.m[1][1]);
+		if (curPenetration < m_penetrationDepth) {
+			m_penetrationDepth = curPenetration;
+			m_axisOfMinimumPenetration = au[2].Cross(AbsR.Up());
+			m_isFaceToFaceCollision = false;
+			m_edge1Dir = au[2];
+			m_edge2Dir = AbsR.Up();
+		}
+	}
 
 	// Test axis L = A2 x B2 
 	ra = ae[0] * AbsR.m[1][2] + ae[1] * AbsR.m[0][2];
 	rb = be[0] * AbsR.m[2][1] + be[1] * AbsR.m[2][0];
 	if (abs(t[1] * R.m[0][2] - t[0] * R.m[1][2]) > ra + rb) return 0;
+	else {
+		//Non separating axis, record penetration
+		float curPenetration = (ra + rb) - abs(t[1] * R.m[0][2] - t[0] * R.m[1][2]);
+		if (curPenetration < m_penetrationDepth) {
+			m_penetrationDepth = curPenetration;
+			m_axisOfMinimumPenetration = au[2].Cross(AbsR.Forward());
+			m_isFaceToFaceCollision = false;
+			m_edge1Dir = au[2];
+			m_edge2Dir = AbsR.Forward();
+		}
+	}
 
 	/*DERIVE MANIFOLD: OPEN DYNAMICS ENGINE:
 	// given two boxes (p1,R1,side1) and (p2,R2,side2), collide them together and
@@ -1008,7 +1110,75 @@ int dBoxBox (const dVector3 p1, const dMatrix3 R1,
 	return cnum;
 }*/
 	// Since no separating axis is found, the OBBs must be intersecting
+	//@Manifold generation
+	//@Two approaches for querying contact data: Face to face contact and edge to edge
+	//@We move all necessary data to global space, and we solve for our contacts THERE
+	//@WE SOLVE IN LOCAL SPACE
+	//https://www.randygaul.net/2014/05/22/deriving-obb-to-obb-intersection-sat/
+	if (m_isFaceToFaceCollision) {
+		//Identify axis of minimum penetration using the SAT (This defines the reference face)
+		//Find the most anti parallel face on other shape(this defines the incident face)
+		//Clipping incident face to reference face (Sutherman-Hodgmann clipping)
+		//Incident face is the one which most faces the axisOfminimumPenetration (dot product is smaller)
+		m_axisOfMinimumPenetration.Normalize();
+		Plane referencePlane;//Plane in local space
+		if (m_isFace1) {
+			//m_axisOfMinimumPenetration comes from rb1
+			Vector3 oneToTwo = t2.m_position - t1.m_position;
+			if (oneToTwo.Dot(m_axisOfMinimumPenetration) < 0) m_axisOfMinimumPenetration *= -1;
+			referencePlane = Plane(m_axisOfMinimumPenetration, ae[m_faceIndex]);
+			//We need to find the incident face, that is, the one that most faces (Most negative dot product) the axisOfMinimumPenetration, in rb2
+			Vector3 possibleFaces[6] = { AbsR.Right(), AbsR.Left(), AbsR.Up(), AbsR.Down(), AbsR.Forward(), AbsR.Backward() };
+			float minDot = FLT_MAX;
+			Vector3 incidentFaceNormal;
+			for (int i = 0; i < 6; i++) {
+				float currentDot = m_axisOfMinimumPenetration.Dot(possibleFaces[i]);
+				if (currentDot < minDot) {
+					minDot = currentDot;
+					incidentFaceNormal = possibleFaces[i];
+				}
+			}
+			bool debug;
+		}
+		else {
+			//m_axisOfMinimumPenetration comes from rb2
+			Vector3 twoToOne = t1.m_position - t2.m_position;
+			if (twoToOne.Dot(m_axisOfMinimumPenetration) < 0) m_axisOfMinimumPenetration *= -1;
+			referencePlane = Plane(m_axisOfMinimumPenetration, be[m_faceIndex]);
+		}
+
+		//Now m_axisOfMinimumPenetration points the right place
+		//We can get the reference face, and the incident face.
+		//We will also need the clipping planes, that are normal to the reference face
+		
+	}
+	else {
+		//m_axisOfMinimumPenetration = Vector3::Transform(m_axisOfMinimumPenetration, AbsR.Invert());SOLVE IN LOCAL SPACE
+		m_axisOfMinimumPenetration.Normalize();
+		//@Support points / Supporting edges
+		// We have the axes, but not the edges: each axis has 4 edges parallel
+		// to it, we need to find which of the 4 for each object. We do
+		// that by finding the point in the centre of the edge. We know
+		// its component in the direction of the box's collision axis is zero
+		// (its a mid-point) and we determine which of the extremes in each
+		// of the other axes is closest.
+
+		m_edge2Dir = Vector3::Transform(m_edge2Dir, AbsR.Invert());
+		//Rotate axis through inverse R.
+		//@Return contact point?
+		QueryOBBEdgeContact(rb1, rb2, m_edge1Dir, m_edge2Dir, m_axisOfMinimumPenetration, m_penetrationDepth);
+	}
 	return true;
+}
+Vector3 PhysicSystem::QueryOBBEdgeContact(RigidbodyComponent * rb1, RigidbodyComponent * rb2, Vector3 edge1Dir, Vector3 edge2Dir,
+	Vector3 axisOfMinimumPenetration, float penetrationDepth)
+{
+	//@Get contact point
+	OrientedBoundingBox * a = dynamic_cast<OrientedBoundingBox*>(rb1->m_shape);//a
+	OrientedBoundingBox * b = dynamic_cast<OrientedBoundingBox*>(rb2->m_shape);//b
+
+
+	return Vector3();
 }
 ///@Helpful queries
 DirectX::SimpleMath::Vector3 PhysicSystem::ClosestPtPointOBB( Vector3 p, OrientedBoundingBox * b, Vector3 bc, Quaternion bRot)
@@ -1050,4 +1220,195 @@ DirectX::SimpleMath::Vector3 PhysicSystem::ClosestPtPointOBB( Vector3 p, Oriente
 		closestPoint += dist * bu[i];
 	}
 	return closestPoint;
+}
+
+float PhysicSystem::ClosestPtSegmentSegment(Vector3 a1, Vector3 a2, Vector3 b1, Vector3 b2, Vector3 &p1, Vector3 &p2, float &f1, float &f2)
+{
+	//@From Christer Ericson's Real-Time Collision Detection
+	/*
+	// Clamp n to lie within the range [min, max] 
+	float Clamp(float n, float min, float max) 
+	{
+		if (n < min) return min;
+		if (n > max) return max;
+		return n;
+	}
+	// Computes closest points C1 and C2 of S1(s)=P1+s*(Q1-P1) and 
+	// S2(t)=P2+t*(Q2-P2), returning s and t. Function result is squared 
+	// distance between between S1(s) and S2(t) 
+	float ClosestPtSegmentSegment(Point p1, Point q1, Point p2, Point q2, float &s, float &t, Point &c1, Point &c2) 
+	{
+		Vector d1 = q1 - p1; 
+		// Direction vector of segment S1 
+		Vector d2 = q2 - p2;
+		// Direction vector of segment S2 
+		Vector r = p1 - p2;
+		float a = Dot(d1, d1);
+		// Squared length of segment S1, always nonnegative 
+		float e = Dot(d2, d2);
+		// Squared length of segment S2, always nonnegative 
+		float f = Dot(d2, r);
+		// Check if either or both segments degenerate into points 
+		if (a <= EPSILON && e <= EPSILON) 
+		{ 
+			// Both segments degenerate into points 
+			s=t=0.0f; 
+			c1 = p1;
+			c2 = p2;
+			return Dot(c1 - c2, c1 - c2);
+		} 
+		if (a <= EPSILON) 
+		{
+			// First segment degenerates into a point 
+			s = 0.0f;
+			t = f / e; // s = 0 => t =(b*s + f) / e = f / e 
+			t = Clamp(t, 0.0f, 1.0f);
+		} else 
+		{
+		float c = Dot(d1, r);
+		if (e <= EPSILON) 
+		{
+			// Second segment degenerates into a point 
+			t = 0.0f; s = Clamp(-c / a, 0.0f, 1.0f); // t = 0 => s =(b*t - c) / a = -c / a 
+		} else 
+		{
+			// The general nondegenerate case starts here 
+			float b = Dot(d1, d2);
+			float denom = a*e-b*b; // Always nonnegative
+			// If segments not parallel, compute closest point on L1 to L2 and 
+			// clamp to segment S1. Else pick arbitrary s (here 0) 
+			if (denom != 0.0f) 
+			{
+				s = Clamp((b*f - c*e) / denom, 0.0f, 1.0f);
+			} 
+			else s = 0.0f; 
+			// Compute point on L2 closest to S1(s) using 
+			// t = Dot((P1 + D1*s) - P2,D2) / Dot(D2,D2) = (b*s + f) / e 
+			t = (b*s + f) / e;
+			// If t in [0,1] done. Else clamp t, recompute s for the new value 
+			// of t using s = Dot((P2 + D2*t) - P1,D1) / Dot(D1,D1)= (t*b - c) / a 
+			// and clamp s to [0, 1] 
+			if (t < 0.0f) 
+			{ 
+				t = 0.0f;
+				s = Clamp(-c / a, 0.0f, 1.0f);
+			} else if (t > 1.0f) 
+			{ 
+				t = 1.0f;
+				s = Clamp((b - c) / a, 0.0f, 1.0f);
+			}
+		}
+	}
+	c1 = p1 + d1 * s;
+	c2 = p2 + d2 * t;
+	return Dot(c1 - c2, c1 - c2);
+	}
+	*/
+
+	//@FOR NOW WE WON'T HANDLE DEGENERATE CASES
+	//Direction vector of segment a;
+	Vector3 d1 = a2 - a1;
+	//Dv of segment b
+	Vector3 d2 = b2 - b1;
+	
+	Vector3 r = a2 - b2;
+
+	float aSq = d1.LengthSquared();
+	float bSq = d2.LengthSquared();
+
+	float f = d2.Dot(r);
+	float c = d1.Dot(r);
+	// The general nondegenerate case starts here 
+	float b = d1.Dot(d2);
+	float denom = aSq * bSq - b * b; // Always nonnegative
+	// If segments not parallel, compute closest point on L1 to L2 and 
+	// clamp to segment S1. Else pick arbitrary s (here 0) 
+	if (denom != 0.0f)
+	{	
+		//@Quick way to clamp: std::max(lower, std::min(n, upper))
+			f1 = max(0.0f, min(b*f - c * bSq, 1.0f));
+	}
+	else f1 = 0.0f;
+	// Compute point on L2 closest to S1(s) using 
+	// t = Dot((P1 + D1*s) - P2,D2) / Dot(D2,D2) = (b*s + f) / e 
+	f2 = (b*f1 + f) / bSq;
+	// If t in [0,1] done. Else clamp t, recompute s for the new value 
+	// of t using s = Dot((P2 + D2*t) - P1,D1) / Dot(D1,D1)= (t*b - c) / a 
+	// and clamp s to [0, 1] 
+	if (f2 < 0.0f)
+	{
+		f2 = 0.0f;
+		f1 = max(0.0f, min(-c / aSq, 1.0f));// Clamp(-c / aSq, 0.0f, 1.0f);
+	}
+	else if (f2 > 1.0f)
+	{
+		f2 = 1.0f;
+		f1 = max(0.0f, min(b - c / aSq, 1.0f));// Clamp((b - c) / a, 0.0f, 1.0f);
+	}
+
+	p1 = a1 + d1 * f1;
+	p2 = b1 + d2 * f2;
+	Vector3 p2ToP1 = p1 - p2;
+
+	return p2ToP1.LengthSquared();
+}
+
+DirectX::SimpleMath::Vector3 PhysicSystem::ClosestPtPointTriangle(Vector3 p, Vector3 a, Vector3 b, Vector3 c)
+{
+	//@From Christer Ericson's Real-Time collision detection book
+
+	//Check if P in vertex region outside A
+	Vector3 ab = b - a;
+	Vector3 ac = c - a;
+	Vector3 ap = p - a;
+
+	float d1 = ab.Dot(ap);
+	float d2 = ac.Dot(ap);
+	if (d1 <= 0.0f && d2 <= 0.0f)return a;//barycentric coordinates(1,0,0)
+
+	//Check if P in vertex region outside B
+	Vector3 bp = p - b;
+	
+	float d3 = ab.Dot(bp);
+	float d4 = ac.Dot(bp);
+	if (d3 >= 0.0f && d4 <= d3) return b;//barycentric coordinates(0,1,0)
+
+	//Check if P in edge region of AB, if so return projection of P onto AB
+	float vc = d1 * d4 - d3 * d2;
+	if (vc <= 0.0f && d1 >= 0.0f && d3 <= 0.0f) {
+		float v = d1 / (d1 - d3);
+		return a + v * ab;//barycentric coordinates(1-v,v,0)
+	}
+	
+	//Check if P in vertex region outside C
+	Vector3 cp = p - c;
+	float d5 = ab.Dot(cp);
+	float d6 = ac.Dot(cp);
+	if (d6 >= 0.0f && d5 <= d6)return c; //barycentric coordinates (0,0,1)
+}
+
+Vector3 PhysicSystem::ClosestPtPointTetrahedron(Vector3 p, Vector3 a, Vector3 b, Vector3 c, Vector3 d)
+{
+	// Start out assuming point inside all halfspaces, so closest to itself 
+	Vector3 closestPt = p; float bestSqDist = FLT_MAX; // If point outside face abc then compute closest point on abc 
+	Vector3 q = ClosestPtPointTriangle(p, a, b, c);
+	float sqDist = (q-p).LengthSquared(); 
+	// Update best closest point if (squared) distance is less than current best
+	if (sqDist < bestSqDist) bestSqDist = sqDist, closestPt = q; 
+	
+	// Repeat test for face acd 
+	Vector3 q2 = ClosestPtPointTriangle(p, a, c, d); 
+	float sqDist2 = (q2-p).LengthSquared();
+	if (sqDist2 < bestSqDist) bestSqDist = sqDist2, closestPt = q2;
+
+	// Repeat test for face adb 
+	Vector3 q3 = ClosestPtPointTriangle(p, a, d, b); 
+	float sqDist3 = (q3-p).LengthSquared();
+	if (sqDist3 < bestSqDist) bestSqDist = sqDist3, closestPt = q3;
+	// Repeat test for face bdc 
+	Vector3 q4 = ClosestPtPointTriangle(p, b, d, c);
+	float sqDist4 = (q4 - p).LengthSquared();
+	if (sqDist4 < bestSqDist) bestSqDist = sqDist4, closestPt = q4;
+	
+	return closestPt;
 }

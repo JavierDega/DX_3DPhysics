@@ -11,7 +11,8 @@ struct AABB {
 //@To avoid convoluted shape downcasts
 enum ShapeType {
 	SPHERE,
-	OBB
+	OBB,
+	CAPSULE
 };
 //@Finds the common ground between all collider types, including those used for broad phase.
 class Shape

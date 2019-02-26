@@ -72,6 +72,9 @@
     <ClInclude Include="Headers\ContactSolver.h">
       <Filter>Headers</Filter>
     </ClInclude>
+    <ClInclude Include="Headers\Capsule.h">
+      <Filter>Headers\Shapes</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="pch.cpp" />
@@ -121,6 +124,9 @@
     </ClCompile>
     <ClCompile Include="Sources\ContactSolver.cpp">
       <Filter>Sources</Filter>
+    </ClCompile>
+    <ClCompile Include="Sources\Capsule.cpp">
+      <Filter>Sources\Shapes</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

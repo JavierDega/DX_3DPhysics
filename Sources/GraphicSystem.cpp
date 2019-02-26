@@ -4,6 +4,7 @@
 #include "PhysicSystem.h"
 #include "Sphere.h"
 #include "OrientedBoundingBox.h"
+#include "Capsule.h"
 
 #include <stdio.h>
 
@@ -54,7 +55,6 @@ void GraphicSystem::Initialize(ID3D11Device1* device, ID3D11DeviceContext1 * dev
 		else if (theOBB) {
 			theOBB->m_primitive = GeometricPrimitive::CreateBox(deviceContext, theOBB->m_halfExtents*2);
 		}
-
 		//@Get AABB size
 		Vector3 AABBSize = rigidbodies[i]->m_shape->m_AABB.m_halfExtent*2;
 		rigidbodies[i]->m_shape->m_AABBPrimitive = GeometricPrimitive::CreateBox(deviceContext, AABBSize);
