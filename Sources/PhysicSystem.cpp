@@ -1128,22 +1128,35 @@ int dBoxBox (const dVector3 p1, const dMatrix3 R1,
 			if (oneToTwo.Dot(m_axisOfMinimumPenetration) < 0) m_axisOfMinimumPenetration *= -1;
 			referencePlane = Plane(m_axisOfMinimumPenetration, ae[m_faceIndex]);
 			//We need to find the incident face, that is, the one that most faces (Most negative dot product) the axisOfMinimumPenetration, in rb2
-			Vector3 possibleFaces[6] = { AbsR.Right(), AbsR.Up(), AbsR.Forward() };
+			Vector3 possibleFaces[3] = { AbsR.Right(), AbsR.Up(), AbsR.Forward() };
 			float minDot = FLT_MAX;
 			Vector3 incidentFaceNormal;
 			unsigned int incidentFaceIndex;
-			for (int i = 0; i < 6; i++) {
+			float direction;
+			for (int i = 0; i < 3; i++) {
+				//@Each basis corresponds to two, opposite face normals
+				//Face1
 				float currentDot = m_axisOfMinimumPenetration.Dot(possibleFaces[i]);
 				if (currentDot < minDot) {
 					minDot = currentDot;
 					incidentFaceNormal = possibleFaces[i];
 					incidentFaceIndex = i;
+					direction = 1;
+				}
+				//Face2
+				currentDot = m_axisOfMinimumPenetration.Dot(-possibleFaces[i]);
+				if (currentDot < minDot) {
+					minDot = currentDot;
+					incidentFaceNormal = -possibleFaces[i];
+					incidentFaceIndex = i;
+					direction = -1;
 				}
 			}
+			//tv is our translation vector for object2, i.e, the centerpoint of OBB2
+			Vector3 translationVector = Vector3(t[0], t[1], t[2]);//Translation vector from A's coordinate frame
+			Vector3 centreOfFace = translationVector + direction * possibleFaces[incidentFaceIndex];
 
-			Vector3 centreOfFace;
-
-			for (int i = 0; i < 3; i++) {
+			for (int i = 0; i < 4; i++) {
 				
 			}
 			//@We need more data: The points that define the face whose outward normal = incidentFaceNormal
@@ -1201,6 +1214,11 @@ Vector3 PhysicSystem::QueryOBBEdgeContact(RigidbodyComponent * rb1, RigidbodyCom
 
 
 	return Vector3();
+}
+DirectX::SimpleMath::Vector3 PhysicSystem::ClosestPtPointPlane(DirectX::SimpleMath::Vector3 point, DirectX::SimpleMath::Plane plane)
+{
+	float t = (plane.Normal().Dot(point) - plane.D()) / plane.Normal().LengthSquared();
+	return point - t * plane.Normal();
 }
 ///@Helpful queries
 DirectX::SimpleMath::Vector3 PhysicSystem::ClosestPtPointOBB( Vector3 p, OrientedBoundingBox * b, Vector3 bc, Quaternion bRot)
@@ -1433,4 +1451,104 @@ Vector3 PhysicSystem::ClosestPtPointTetrahedron(Vector3 p, Vector3 a, Vector3 b,
 	if (sqDist4 < bestSqDist) bestSqDist = sqDist4, closestPt = q4;
 	
 	return closestPt;
+}
+
+vector<DirectX::SimpleMath::Vector3> PhysicSystem::OBBClip(DirectX::SimpleMath::Vector3 faceVertices[4], DirectX::SimpleMath::Plane supportPlanes[4], DirectX::SimpleMath::Plane referencePlane)
+{
+	https://gamedevelopment.tutsplus.com/tutorials/understanding-sutherland-hodgman-clipping-for-physics-engines--gamedev-11917
+	/*Polygon SutherlandHodgman(const Polygon startingPolygon, Plane[] clippingPlanes)
+	{
+		Polygon output = startingPolygon
+			for each Plane clippingPlane in clippingPlanes
+				input = output
+				output.Clear()
+				Vec2 startingPoint = input.Last()
+				for each Vec2 endPoint in input
+					if startingPoint and endPoint in front of clippingPlane
+						out.push(endPoint)
+					else if startingPoint in front and endPoint behind clippingPlane
+						out.push(Intersection(clippingPlane, startingPoint, endPoint))
+					else if startingPoint and endPoint behind clippingPlane
+						out.push(Intersection(clippingPlane, startingPoint, endPoint))
+						out.push(endPoint)
+						endPoint = startingPoint
+						return output
+	}*/
+	/*// InFront = plane.Distance( point ) > 0.0f
+	// Behind  = plane.Distance( point ) < 0.0f
+ 
+	Vec2 p1, p2;
+	ClipPlane plane;
+ 
+	case p1 InFront and p2 InFront
+	  push p2
+	case p1 InFront and p2 Behind
+	  push intersection
+	case p1 Behind and p2 InFront
+	  push intersection
+	  push p2
+  */
+
+	vector<DirectX::SimpleMath::Vector3> contactPoints;
+	for (int i = 0; i < 4; i++) {
+		//For each vertex
+		Vector3 startingPoint = faceVertices[i];
+		Vector3 endPoint = (i == 3) ? (faceVertices[0]) : (faceVertices[i + 1]);//@So we run the last line loop properly
+		bool inOrOut1 = true;
+		bool inOrOut2 = true;
+
+		Vector3 intersectionPoint = Vector3(FLT_MAX,FLT_MAX,FLT_MAX);
+		//@Clip against support planes
+		for (int j = 0; j < 4; j++) {
+			//For each plane
+			Vector3 closestP1 = ClosestPtPointPlane(startingPoint, supportPlanes[j]);
+			float dist1 = (startingPoint - closestP1).Length();
+			if ((startingPoint - closestP1).Dot(supportPlanes[j].Normal()) > 0) {
+				//Do nothing, point is inside this support plane, but not necessarily any of the others
+			}
+			else inOrOut1 = false;
+			
+			Vector3 closestP2 = ClosestPtPointPlane(endPoint, supportPlanes[j]);
+			float dist2 = (endPoint - closestP2).Length();
+			if ((endPoint - closestP2).Dot(supportPlanes[j].Normal()) > 0) {
+				//Idem
+			}
+			else inOrOut2 = false;
+
+			if (inOrOut1 != inOrOut2) {
+				//There is an intersection with the plane, we can find it with lerp
+				//By using the ratio of the distances as the alpha for the point in the line
+				//@If the intersectionPoint to this plane is smaller, then this is the one we keep, since multiple intersections aren't considered
+				Vector3 curIntersection = Vector3::Lerp(startingPoint, endPoint, dist1 / (dist1 + dist2));
+				if (curIntersection.Length() < intersectionPoint.Length()) intersectionPoint = curIntersection;
+			}
+
+		}
+
+		//Clip against referencePlane
+		Vector3 closestP1 = ClosestPtPointPlane(startingPoint, referencePlane);
+		if ((startingPoint - closestP1).Dot(referencePlane.Normal()) > 0) {
+			//Idem
+		}
+		else inOrOut1 = false;
+		
+		Vector3 closestP2 = ClosestPtPointPlane(endPoint, referencePlane);
+		if ((endPoint - closestP2).Dot(referencePlane.Normal()) > 0) {
+			//Idem
+		}
+		else inOrOut2 = false;
+
+
+		//Now we know exactly whether each line point is inside or outside our set of planes, we know which ones to keep
+		if (inOrOut1 && inOrOut2)contactPoints.push_back(endPoint);
+		if (inOrOut1 && !inOrOut2)contactPoints.push_back(intersectionPoint);
+		if (!inOrOut1 && inOrOut2) {
+			contactPoints.push_back(intersectionPoint);
+			contactPoints.push_back(endPoint);
+		}
+	}
+	
+	//@In our context, we only keep points that are in the reference plane
+
+	return contactPoints;
 }

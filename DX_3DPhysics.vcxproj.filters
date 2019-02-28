@@ -75,6 +75,9 @@
     <ClInclude Include="Headers\Capsule.h">
       <Filter>Headers\Shapes</Filter>
     </ClInclude>
+    <ClInclude Include="Headers\NarrowPhase.h">
+      <Filter>Headers</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="pch.cpp" />
@@ -127,6 +130,9 @@
     </ClCompile>
     <ClCompile Include="Sources\Capsule.cpp">
       <Filter>Sources\Shapes</Filter>
+    </ClCompile>
+    <ClCompile Include="Sources\NarrowPhase.cpp">
+      <Filter>Sources</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

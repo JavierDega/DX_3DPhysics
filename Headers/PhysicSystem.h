@@ -53,6 +53,8 @@ public:
 	//@Helpful queries
 	DirectX::SimpleMath::Vector3 QueryOBBEdgeContact(RigidbodyComponent * rb1, RigidbodyComponent * rb2, DirectX::SimpleMath::Vector3 edge1Dir, DirectX::SimpleMath::Vector3 edge2Dir,
 		DirectX::SimpleMath::Vector3 axisOfMinimumPenetration, float penetrationDepth);
+	//Closest point on plane to point
+	DirectX::SimpleMath::Vector3 ClosestPtPointPlane(DirectX::SimpleMath::Vector3 point, DirectX::SimpleMath::Plane plane);
 	// Given point p, return point q on (or in) OBB b, closest to p 
 	DirectX::SimpleMath::Vector3 ClosestPtPointOBB(DirectX::SimpleMath::Vector3 p, OrientedBoundingBox * b, DirectX::SimpleMath::Vector3 bc, DirectX::SimpleMath::Quaternion bRot);
 	//Get closest point between two line segments, returns LengthSq between both
@@ -63,6 +65,8 @@ public:
 	//Get closest point p to a tetrahedron defined by four points
 	DirectX::SimpleMath::Vector3 ClosestPtPointTetrahedron(DirectX::SimpleMath::Vector3 p, DirectX::SimpleMath::Vector3 a, DirectX::SimpleMath::Vector3 b, DirectX::SimpleMath::Vector3 c,
 		DirectX::SimpleMath::Vector3 d);
+	//@SUtherland-Hodgmann clipping algorithm
+	std::vector<DirectX::SimpleMath::Vector3> OBBClip(DirectX::SimpleMath::Vector3 faceVertices[4], DirectX::SimpleMath::Plane supportPlanes[4], DirectX::SimpleMath::Plane referencePlane);
 
 	//Variables
 	//@Solver
