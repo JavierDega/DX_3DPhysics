@@ -1128,7 +1128,36 @@ int dBoxBox (const dVector3 p1, const dMatrix3 R1,
 			if (oneToTwo.Dot(m_axisOfMinimumPenetration) < 0) m_axisOfMinimumPenetration *= -1;
 			referencePlane = Plane(m_axisOfMinimumPenetration, ae[m_faceIndex]);
 			//We need to find the incident face, that is, the one that most faces (Most negative dot product) the axisOfMinimumPenetration, in rb2
-			Vector3 possibleFaces[6] = { AbsR.Right(), AbsR.Left(), AbsR.Up(), AbsR.Down(), AbsR.Forward(), AbsR.Backward() };
+			Vector3 possibleFaces[6] = { AbsR.Right(), AbsR.Up(), AbsR.Forward() };
+			float minDot = FLT_MAX;
+			Vector3 incidentFaceNormal;
+			unsigned int incidentFaceIndex;
+			for (int i = 0; i < 6; i++) {
+				float currentDot = m_axisOfMinimumPenetration.Dot(possibleFaces[i]);
+				if (currentDot < minDot) {
+					minDot = currentDot;
+					incidentFaceNormal = possibleFaces[i];
+					incidentFaceIndex = i;
+				}
+			}
+
+			Vector3 centreOfFace;
+
+			for (int i = 0; i < 3; i++) {
+				
+			}
+			//@We need more data: The points that define the face whose outward normal = incidentFaceNormal
+			//@The orthonormal planes to the reference plane, to define our area for Sutherland-Clipping
+
+			//@GENERATE THE FACE POINTS
+		}
+		else {
+			//m_axisOfMinimumPenetration comes from rb2
+			Vector3 twoToOne = t1.m_position - t2.m_position;
+			if (twoToOne.Dot(m_axisOfMinimumPenetration) < 0) m_axisOfMinimumPenetration *= -1;
+			referencePlane = Plane(m_axisOfMinimumPenetration, be[m_faceIndex]);
+			//We need to find the incident face, that is, the one that most faces (Most negative dot product) the axisOfMinimumPenetration, in rb1
+			Vector3 possibleFaces[6] = { ma.Right(), ma.Left(), ma.Up(), ma.Down(), ma.Forward(), ma.Backward() };
 			float minDot = FLT_MAX;
 			Vector3 incidentFaceNormal;
 			for (int i = 0; i < 6; i++) {
@@ -1138,13 +1167,6 @@ int dBoxBox (const dVector3 p1, const dMatrix3 R1,
 					incidentFaceNormal = possibleFaces[i];
 				}
 			}
-			bool debug;
-		}
-		else {
-			//m_axisOfMinimumPenetration comes from rb2
-			Vector3 twoToOne = t1.m_position - t2.m_position;
-			if (twoToOne.Dot(m_axisOfMinimumPenetration) < 0) m_axisOfMinimumPenetration *= -1;
-			referencePlane = Plane(m_axisOfMinimumPenetration, be[m_faceIndex]);
 		}
 
 		//Now m_axisOfMinimumPenetration points the right place
