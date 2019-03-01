@@ -113,4 +113,5 @@ void ContactSolver::Solve(float dt)
 		
 
 	}
+	m_collidingPairs.clear();
 }

@@ -209,7 +209,7 @@ void ObjectSystem::LoadScene( unsigned int index)
 			obb1->AddComponent(rb1);
 			AddObject(obb1);
 
-			GameObject * obb2 = new GameObject("OBB2", Vector3( 1.5, 0, -10.f), Quaternion::CreateFromYawPitchRoll(0.5, 0.5, 0.5));
+			GameObject * obb2 = new GameObject("OBB2", Vector3( 1.5, 0, -10.f), Quaternion::CreateFromYawPitchRoll(0.3, 0.3, 0.3));
 			RigidbodyComponent * rb2 = new RigidbodyComponent(Vector3(1, 1, 1));
 			rb2->m_force += Vector3( -500, 0, 0);
 			obb2->AddComponent(rb2);
