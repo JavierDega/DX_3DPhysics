@@ -28,6 +28,9 @@ public:
 	bool m_isKinematic;
 	//Semi euler
 	DirectX::SimpleMath::Vector3 m_force, m_acceleration, m_velocity;
+	DirectX::SimpleMath::Vector3 m_torque;//@Angular force
+	DirectX::SimpleMath::Vector3 m_angularAcceleration;//@Ang accel
+	DirectX::SimpleMath::Vector3 m_angularVelocity;//Radians/dt. Direction represents axis of rotation, magnitude is amount of rotation
 
 };
 #endif /*RIGIDBODYCOMPONENT_H_*/

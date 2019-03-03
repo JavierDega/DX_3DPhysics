@@ -114,20 +114,32 @@ void PhysicSystem::UpdatePhysics(float dt) {
 		if (currentRb->m_isKinematic) {
 			currentRb->m_acceleration = Vector3::Zero;
 			currentRb->m_velocity = Vector3::Zero;
+			currentRb->m_angularVelocity = Vector3::Zero;
+			currentRb->m_angularAcceleration = Vector3::Zero;
 		}
 		else
 		{
 			//Calculate generalized forces
 			currentRb->m_force -= m_airViscosity * currentRb->m_velocity;//@Viscosity
 			currentRb->m_force += m_gravity*currentRb->m_mass;//@force relative to mass
+			//@Angular drag?
 
 			//Apply forces
 			currentRb->m_acceleration = currentRb->m_force / currentRb->m_mass;
 			currentRb->m_velocity += currentRb->m_acceleration*dt;
 			currentRb->m_owner->m_transform.m_position += currentRb->m_velocity*dt;
+
+			//Angular
+			currentRb->m_angularAcceleration = currentRb->m_torque / currentRb->m_mass;//For now, we use the mass scalar as our moment of inertia, our inertia tensor
+			currentRb->m_angularVelocity += currentRb->m_angularAcceleration*dt;
+			float radiansPerSecond = currentRb->m_angularVelocity.Length();
+			if (radiansPerSecond > FLT_EPSILON) {
+				currentRb->m_owner->m_transform.m_rotation *= Quaternion::CreateFromAxisAngle(currentRb->m_angularVelocity / radiansPerSecond, radiansPerSecond*dt);
+			}
 		}
 		//Forces are computed every frame
-		currentRb->m_force = Vector3(0, 0, 0);
+		currentRb->m_force = Vector3::Zero;
+		currentRb->m_torque = Vector3::Zero;
 		//@SSScheme
 		//@BroadPhase
 		for (unsigned int j = i + 1; j < m_rigidbodies.size(); j++) {

@@ -28,7 +28,8 @@ GraphicSystem * GraphicSystem::GetInstance()
 GraphicSystem::GraphicSystem() 
 	: m_pitch(0), m_yaw(3.14), m_cam(Vector3::Zero), m_look(Vector3::Backward)
 {
-
+	m_device = NULL;
+	m_deviceContext = NULL;
 }
 //Destructor (Singleton so..?)
 GraphicSystem::~GraphicSystem() 
@@ -37,6 +38,9 @@ GraphicSystem::~GraphicSystem()
 }
 ///Initialize components and shapes
 void GraphicSystem::Initialize(ID3D11Device1* device, ID3D11DeviceContext1 * deviceContext) {
+
+	m_device = device;
+	m_deviceContext = deviceContext;
 	ObjectSystem * os = ObjectSystem::GetInstance();
 	vector<RigidbodyComponent*> rigidbodies = os->GetRigidbodyComponentList();
 	
@@ -55,9 +59,6 @@ void GraphicSystem::Initialize(ID3D11Device1* device, ID3D11DeviceContext1 * dev
 		else if (theOBB) {
 			theOBB->m_primitive = GeometricPrimitive::CreateBox(deviceContext, theOBB->m_halfExtents*2.0f);
 		}
-		//@Get AABB size
-		Vector3 AABBSize = rigidbodies[i]->m_shape->m_AABB.m_halfExtent*2;
-		rigidbodies[i]->m_shape->m_AABBPrimitive = GeometricPrimitive::CreateBox(deviceContext, AABBSize);
 	}
 }
 ///Window size dependent resources
@@ -97,8 +98,10 @@ void GraphicSystem::Update(float dt) {
 
 		//@Debug draw (Wireframes) (Only take into account position and shape properties, nor rotation nor scale)
 		if (ps->m_AABBCulling.isEnabled) {
+			//Create local primitive
+			currentRb->m_shape->m_cullingPrimitive = GeometricPrimitive::CreateBox(m_deviceContext, currentRb->m_shape->m_AABB.m_halfExtent * 2);
 			//If its enabled, the PhysicsSystem, should of have computed, and updated, the AABB
-			currentRb->m_shape->m_AABBPrimitive->Draw( translation, view, m_proj, currentRb->m_shape->m_AABBColor, nullptr, true);
+			currentRb->m_shape->m_cullingPrimitive->Draw( translation, view, m_proj, currentRb->m_shape->m_AABBColor, nullptr, true);
 		}
 		if (ps->m_sphereCulling.isEnabled) {
 		
@@ -117,14 +120,14 @@ void GraphicSystem::Update(float dt) {
 ///Reset shapes and components
 void GraphicSystem::Reset()
 {
+	//@What to do avoid device, and deviceContext pointers?
 	ObjectSystem * os = ObjectSystem::GetInstance();
 	vector<RigidbodyComponent*> rigidbodies = os->GetRigidbodyComponentList();
 
 	//@Reset shapes
 	for (unsigned int i = 0; i < rigidbodies.size(); i++) {
 		rigidbodies[i]->m_shape->m_primitive.reset();
-		rigidbodies[i]->m_shape->m_AABBPrimitive.reset();
-		rigidbodies[i]->m_shape->m_spherePrimitive.reset();
+		rigidbodies[i]->m_shape->m_cullingPrimitive.reset();
 	}
 
 	//@Reset spriteBatch

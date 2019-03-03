@@ -12,4 +12,5 @@ public:
 	float m_radius;
 	DirectX::SimpleMath::Vector3 m_pos1;
 	DirectX::SimpleMath::Vector3 m_pos2;
+	//@Render with cylinder and two spheres
 };

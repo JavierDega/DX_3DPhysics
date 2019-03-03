@@ -26,6 +26,8 @@ public:
 	//Utility
 
 	///Variables
+	ID3D11Device1* m_device;
+	ID3D11DeviceContext1 * m_deviceContext;
 	//@Font drawing
 	std::unique_ptr<DirectX::SpriteBatch> m_spriteBatch;
 	std::unique_ptr<DirectX::SpriteFont> m_font;

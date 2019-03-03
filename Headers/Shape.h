@@ -27,8 +27,7 @@ public:
 	DirectX::SimpleMath::Color m_AABBColor;
 	DirectX::SimpleMath::Color m_sphereColor;
 	std::unique_ptr<DirectX::GeometricPrimitive> m_primitive;
-	std::unique_ptr<DirectX::GeometricPrimitive> m_AABBPrimitive;
-	std::unique_ptr<DirectX::GeometricPrimitive> m_spherePrimitive;
+	std::unique_ptr<DirectX::GeometricPrimitive> m_cullingPrimitive;
 	AABB m_AABB;
 };
 #endif /*SHAPE_H_*/

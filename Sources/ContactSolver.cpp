@@ -46,7 +46,7 @@ void ContactSolver::Solve(float dt)
 #pragma endregion
 
 		///2:Dynamic resolution
-#pragma region Resolution
+#pragma region Linear Resolution
 
 		//http://www.gamasutra.com/view/feature/131424/pool_hall_lessons_fast_accurate_.php?page=3
 		// First, find the normalized vector n from the center of
@@ -74,27 +74,33 @@ void ContactSolver::Solve(float dt)
 		// v1' = v1 - optimizedP * m2 * n
 		rb1->m_velocity = rb1->m_velocity - optimizedP * rb2->m_mass * manifold.m_normal;
 		rb2->m_velocity = rb2->m_velocity + optimizedP * rb1->m_mass * manifold.m_normal;
-
+		 
 #pragma endregion
 
+		//@Derive force applied from our impulse resolution
 		Vector3 velDelta = rb1->m_velocity - prevVel;
 		Vector3 velDelta2 = rb2->m_velocity - prevVel2;
-
-		//3: Friction::Because of our Impulse based resolution, we need to calculate the normal force 'After the fact'
-		//Same goes for torque?
-		//Flinear = F
-		//Ftorque = F x(p - x)
-#pragma region Kinetic friction
-
-		//@Friction:
 		//Calculate normal force from impulse
 		//f = m*a
 		//f = mdv/dt
 		Vector3 rb1Force = rb1->m_mass * velDelta / dt;
+		Vector3 rb2Force = rb2->m_mass * velDelta2 / dt;
+
+#pragma region Angular resolution
+		//@Now we calculate our angular resolution
+		// Flinear = F
+		//Ftorque = F x(p - x)
+		rb1->m_torque = rb1Force.Cross(manifold.m_points[0].m_position - t1->m_position);//@NOTE: WE'RE ASSUMING SINGLE CONTACT POINTS HERE
+		rb2->m_torque = rb2Force.Cross(manifold.m_points[0].m_position - t2->m_position);
+
+#pragma endregion
+
+		//3: Friction::Because of our Impulse based resolution, we need to calculate the normal force 'After the fact'
+#pragma region Kinetic friction
+
+		//@Friction:
 		//Find component of force along normal
 		float normalForce = rb1Force.Dot(manifold.m_normal);//@DX11's Dot is unnornalized so already multiplied by length
-
-		Vector3 rb2Force = rb2->m_mass * velDelta2 / dt;
 		float normal2Force = rb2Force.Dot(manifold.m_normal);
 
 		Vector3 vel1Norm = rb1->m_velocity;
