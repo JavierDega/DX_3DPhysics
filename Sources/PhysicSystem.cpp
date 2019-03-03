@@ -221,7 +221,7 @@ AABB PhysicSystem::ComputeAABB(RigidbodyComponent * rb)
 		case ShapeType::OBB:
 		{
 			OrientedBoundingBox * obb = dynamic_cast<OrientedBoundingBox*>(rb->m_shape);
-			#pragma region AABB from OBB
+#pragma region AABB from OBB
 			/* From Christer Ericson's Real-Time collision detection book (OPTIMIZED WITHOUT CALCULATING BC)
 			// Transform AABB a by the matrix m and translation t, // find maximum extents, and store result into AABB b.
 			void UpdateAABB(AABB a, float m[3][3], float t[3], AABB &b)
@@ -254,7 +254,7 @@ AABB PhysicSystem::ComputeAABB(RigidbodyComponent * rb)
 					*br[i] += abs(m(i, j)) * ar[j];
 				}
 			}
-			#pragma endregion
+#pragma endregion
 		}
 		break;
 	}

@@ -207,10 +207,11 @@ bool NarrowPhase::OBBToOBB(RigidbodyComponent * rb1, RigidbodyComponent * rb2, f
 	float be[3] = { b->m_halfExtents.x, b->m_halfExtents.y, b->m_halfExtents.z };
 
 	// Compute rotation matrix expressing b in a’s coordinate frame 
-	for (int i = 0; i < 3; i++)
-		for (int j = 0; j < 3; j++)
-			R.m[i][j] = au[i].Dot(bu[j]);
+//	for (int i = 0; i < 3; i++)
+//		for (int j = 0; j < 3; j++)
+//			R.m[i][j] = au[i].Dot(bu[j]);
 
+	R = ma * mb;
 
 	// Compute translation vector t 
 	Vector3 tv = rb2->m_owner->m_transform.m_position - rb1->m_owner->m_transform.m_position;
@@ -436,7 +437,7 @@ bool NarrowPhase::OBBToOBB(RigidbodyComponent * rb1, RigidbodyComponent * rb2, f
 		if (m_isFace1) {
 			//m_axisOfMinimumPenetration comes from rb1
 			Vector3 oneToTwo = t2.m_position - t1.m_position;
-			if (oneToTwo.Dot(m_axisOfMinimumPenetration) < 0) m_axisOfMinimumPenetration *= -1;
+			//if (oneToTwo.Dot(m_axisOfMinimumPenetration) < 0) m_axisOfMinimumPenetration *= -1;
 
 			//@We flip the referencePlane for clipping
 			referencePlane = Plane(-m_axisOfMinimumPenetration, -ae[m_faceIndex]);//We can also use au[m_faceIndex] instead of m_axisOfMinimumPenetration
@@ -580,6 +581,11 @@ bool NarrowPhase::OBBToOBB(RigidbodyComponent * rb1, RigidbodyComponent * rb2, f
 			manifold.m_rigidbodies.second = rb2;
 
 
+			//@Bring the contact point into Global space
+			Matrix pointMatrix = Matrix::CreateTranslation(avgPoint);
+			pointMatrix *= ma.Invert();
+			avgPoint = pointMatrix.Translation();
+			avgPoint += t1.m_position;
 			//Flip normal if we need to
 			manifold.m_points.push_back(contactPoint);
 			manifold.m_normal = (m_axisOfMinimumPenetration.Dot(t1.m_position - t2.m_position) >= 0) ? (m_axisOfMinimumPenetration) : (-m_axisOfMinimumPenetration);//@We follow convention to point towards A
@@ -925,6 +931,7 @@ case p1 Behind and p2 InFront
 */
 
 	vector<DirectX::SimpleMath::Vector3> contactPoints;
+
 	for (int i = 0; i < 4; i++) {
 		//For each vertex
 		Vector3 startingPoint = faceVertices[i];

@@ -4,6 +4,8 @@
 #include "PhysicSystem.h"
 #include "ObjectSystem.h"
 
+#define MOVEMENT 0.03
+
 extern void ExitGame();
 
 using namespace DirectX;
@@ -120,24 +122,24 @@ void InputSystem::Update(float dt)
 
 	//Forward
 	if (kb.W) {
-		*m_cam += relativeForward * 0.1f;
+		*m_cam += relativeForward * MOVEMENT;
 	}
 	if (kb.S) {
-		*m_cam -= relativeForward * 0.1f;
+		*m_cam -= relativeForward * MOVEMENT;
 	}
 	//Right
 	if (kb.D) {
-		*m_cam += relativeRight * 0.1f;
+		*m_cam += relativeRight * MOVEMENT;
 	}
 	if (kb.A) {
-		*m_cam -= relativeRight * 0.1f;
+		*m_cam -= relativeRight * MOVEMENT;
 	}
 	//Up
 	if (kb.Q) {
-		*m_cam += relativeUp * 0.1f;
+		*m_cam += relativeUp * MOVEMENT;
 	}
 	if (kb.E) {
-		*m_cam -= relativeUp * 0.1f;
+		*m_cam -= relativeUp * MOVEMENT;
 	}
 
 }

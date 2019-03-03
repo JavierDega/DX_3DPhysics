@@ -50,10 +50,10 @@ void GraphicSystem::Initialize(ID3D11Device1* device, ID3D11DeviceContext1 * dev
 		OrientedBoundingBox * theOBB = dynamic_cast<OrientedBoundingBox*>(rigidbodies[i]->m_shape);
 
 		if (theSphere) {
-			theSphere->m_primitive = GeometricPrimitive::CreateSphere(deviceContext, theSphere->m_radius * 2);
+			theSphere->m_primitive = GeometricPrimitive::CreateSphere(deviceContext, theSphere->m_radius * 2.0f);
 		}
 		else if (theOBB) {
-			theOBB->m_primitive = GeometricPrimitive::CreateBox(deviceContext, theOBB->m_halfExtents*2);
+			theOBB->m_primitive = GeometricPrimitive::CreateBox(deviceContext, theOBB->m_halfExtents*2.0f);
 		}
 		//@Get AABB size
 		Vector3 AABBSize = rigidbodies[i]->m_shape->m_AABB.m_halfExtent*2;
@@ -93,6 +93,7 @@ void GraphicSystem::Update(float dt) {
 
 		//@Scale set to one, for now.
 		currentRb->m_shape->m_primitive->Draw( world, view, m_proj, currentRb->m_shape->m_color );
+		//@WE CAN DRAW CAPSULES AS CYLINDER,SPHERE COMBINATIONS
 
 		//@Debug draw (Wireframes) (Only take into account position and shape properties, nor rotation nor scale)
 		if (ps->m_AABBCulling.isEnabled) {
