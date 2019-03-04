@@ -559,6 +559,7 @@ bool NarrowPhase::OBBToOBB(RigidbodyComponent * rb1, RigidbodyComponent * rb2, f
 			vector<Vector3> contactPoints = OBBClip(facePoints, supportPlanes, referencePlane);
 			vector<Vector3> finalContactPoints;
 
+			if (contactPoints.size() == 0) return false;
 			//Filter out all contactPoints on the reference plane's surface.
 			for (unsigned int i = 0; i < contactPoints.size(); i++) {
 				if (DistPointPlane(contactPoints[i], referencePlane) > 0) {
@@ -774,6 +775,12 @@ bool NarrowPhase::OBBToOBB(RigidbodyComponent * rb1, RigidbodyComponent * rb2, f
 		QueryOBBEdgeContact(rb1, rb2, m_edge1Dir, m_edge2Dir, m_axisOfMinimumPenetration, m_penetrationDepth);
 	}
 	return true;
+}
+DirectX::SimpleMath::Vector3 NarrowPhase::FindIntersectionWithPlaneFromDistances(DirectX::SimpleMath::Vector3 start, DirectX::SimpleMath::Vector3 end, float d1, float d2)
+{
+	float absD = abs(d1);
+	float absD2 = abs(d2);
+	return Vector3::Lerp(start, end, absD / (absD + absD2));
 }
 //@Helpful queries
 Vector3 NarrowPhase::QueryOBBEdgeContact(RigidbodyComponent * rb1, RigidbodyComponent * rb2, Vector3 edge1Dir, Vector3 edge2Dir,
@@ -1086,12 +1093,11 @@ case p1 Behind and p2 InFront
 		//@Clip against support planes
 		for (int j = 0; j < 4; j++) {
 			//For each plane
-			Vector3 closestP1 = ClosestPtPointPlane(startingPoint, supportPlanes[j]);
-			float dist1 = (startingPoint - closestP1).Length();
-			bool localInOut1 = true;
+			float dist1 = DistPointPlane(startingPoint, supportPlanes[j]);
+			bool localInOut1 = true;//@In/out of CURRENT plane
 			bool localInOut2 = true;
 
-			if ((startingPoint - closestP1).Dot(supportPlanes[j].Normal()) > 0) {
+			if (dist1 > 0) {
 				//Do nothing, point is inside this support plane, but not necessarily any of the others
 			}
 			else {
@@ -1099,9 +1105,8 @@ case p1 Behind and p2 InFront
 				inOrOut1 = false;
 			}
 
-			Vector3 closestP2 = ClosestPtPointPlane(endPoint, supportPlanes[j]);
-			float dist2 = (endPoint - closestP2).Length();
-			if ((endPoint - closestP2).Dot(supportPlanes[j].Normal()) > 0) {
+			float dist2 = DistPointPlane(endPoint, supportPlanes[j]);
+			if (dist2 > 0) {
 				//Idem
 			}
 			else {
@@ -1113,7 +1118,7 @@ case p1 Behind and p2 InFront
 				//There is an intersection with this plane, we can find it with lerp
 				//By using the ratio of the distances as the alpha for the point in the line
 				//@If the intersectionPoint to this plane is smaller, then this is the one we keep, since multiple intersections aren't considered
-				Vector3 curIntersection = Vector3::Lerp(startingPoint, endPoint, dist1 / (dist1 + dist2));
+				Vector3 curIntersection = FindIntersectionWithPlaneFromDistances(startingPoint, endPoint, dist1, dist2);
 				if (curIntersection.Length() < intersectionPoint.Length()) {
 					intersectionPoint = curIntersection;
 				}
@@ -1124,19 +1129,17 @@ case p1 Behind and p2 InFront
 		//Clip against referencePlane
 		bool localInOut1 = true;
 		bool localInOut2 = true;
-		Vector3 closestP1 = ClosestPtPointPlane(startingPoint, referencePlane);
-		float dist1 = (startingPoint - closestP1).Length();
-		if ((startingPoint - closestP1).Dot(referencePlane.Normal()) > 0) {
-			//Idem
+		float dist1 = DistPointPlane(startingPoint,referencePlane);
+		if (dist1 > 0) {
+			//Idem, its on the right side of the plane
 		}
 		else {
 			inOrOut1 = false;
 			localInOut1 = false;
 		}
 
-		Vector3 closestP2 = ClosestPtPointPlane(endPoint, referencePlane);
-		float dist2 = (endPoint - closestP2).Length();
-		if ((endPoint - closestP2).Dot(referencePlane.Normal()) > 0) {
+		float dist2 = DistPointPlane(endPoint, referencePlane);
+		if (dist2 > 0) {
 			//Idem
 		}
 		else {
@@ -1148,7 +1151,7 @@ case p1 Behind and p2 InFront
 			//There is an intersection with the plane, we can find it with lerp
 			//By using the ratio of the distances as the alpha for the point in the line
 			//@If the intersectionPoint to this plane is smaller, then this is the one we keep, since multiple intersections aren't considered
-			Vector3 curIntersection = Vector3::Lerp(startingPoint, endPoint, dist1 / (dist1 + dist2));
+			Vector3 curIntersection = FindIntersectionWithPlaneFromDistances(startingPoint, endPoint, dist1, dist2);
 			if (curIntersection.Length() < intersectionPoint.Length()) intersectionPoint = curIntersection;
 		}
 
