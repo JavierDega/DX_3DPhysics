@@ -90,8 +90,8 @@ void ContactSolver::Solve(float dt)
 		//@Now we calculate our angular resolution
 		// Flinear = F
 		//Ftorque = F x(p - x)
-		rb1->m_torque = rb1Force.Cross(manifold.m_points[0].m_position - t1->m_position);//@NOTE: WE'RE ASSUMING SINGLE CONTACT POINTS HERE
-		rb2->m_torque = rb2Force.Cross(manifold.m_points[0].m_position - t2->m_position);
+		rb1->m_torque = (manifold.m_points[0].m_position - t1->m_position).Cross(rb1Force);//@NOTE: WE'RE ASSUMING SINGLE CONTACT POINTS HERE
+		rb2->m_torque = (manifold.m_points[0].m_position - t2->m_position).Cross(rb2Force);
 
 #pragma endregion
 

@@ -203,17 +203,17 @@ void ObjectSystem::LoadScene( unsigned int index)
 		case 1:
 		{
 
-			GameObject * obb1 = new GameObject("OBB1", Vector3( -1, 0, -10.f), Quaternion::CreateFromYawPitchRoll(0.1,0.1,0.1));
+			GameObject * obb1 = new GameObject("OBB1", Vector3( -1, 0, -10.f));
 			RigidbodyComponent * rb1 = new RigidbodyComponent(Vector3(0.5, 0.5, 0.5));
 			rb1->m_force += Vector3( 500, 0, 0);
-			rb1->m_torque += Vector3(400, 0, 0);
+			//rb1->m_torque += Vector3(800, 0, 0);
 			obb1->AddComponent(rb1);
 			AddObject(obb1);
 
 			GameObject * obb2 = new GameObject("OBB2", Vector3( 1, 0, -10.f), Quaternion::CreateFromYawPitchRoll(0.2, 0.2, 0.2));
 			RigidbodyComponent * rb2 = new RigidbodyComponent(Vector3(0.5, 0.5, 0.5));
 			rb2->m_force += Vector3( -500, 0, 0);
-			rb2->m_torque += Vector3(400, 0, 0);
+			//rb2->m_torque += Vector3(400, 0, 0);
 			obb2->AddComponent(rb2);
 			AddObject(obb2);
 

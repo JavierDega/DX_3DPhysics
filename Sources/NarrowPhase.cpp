@@ -208,11 +208,11 @@ bool NarrowPhase::OBBToOBB(RigidbodyComponent * rb1, RigidbodyComponent * rb2, f
 	float be[3] = { b->m_halfExtents.x, b->m_halfExtents.y, b->m_halfExtents.z };
 
 	// Compute rotation matrix expressing b in a’s coordinate frame 
-	for (int i = 0; i < 3; i++)
-		for (int j = 0; j < 3; j++)
-			R.m[i][j] = au[i].Dot(bu[j]);
+	//for (int i = 0; i < 3; i++)
+	//	for (int j = 0; j < 3; j++)
+	//		R.m[i][j] = au[i].Dot(bu[j]);
 
-	//R = ma * mb;
+	R = ma * mb;
 
 	// Compute translation vector t 
 	Vector3 tv = rb2->m_owner->m_transform.m_position - rb1->m_owner->m_transform.m_position;
@@ -598,6 +598,7 @@ bool NarrowPhase::OBBToOBB(RigidbodyComponent * rb1, RigidbodyComponent * rb2, f
 			//@We flip the referencePlane for clipping
 			Vector3 twoToOne = t1.m_position - t2.m_position;
 			//We want the axis to point outwards from OBB2
+			//@THE AXIS SHOULD BE IN LOCAL SPACE TOO YOU TONTUNO
 			m_axisOfMinimumPenetration = (m_axisOfMinimumPenetration.Dot(twoToOne) >= 0) ? (m_axisOfMinimumPenetration) : (-m_axisOfMinimumPenetration);
 			//Right now we want to find the right normal direction to get the reference plane
 			Vector3 bCentre = Vector3(t[0], t[1], t[2]);
@@ -754,7 +755,7 @@ bool NarrowPhase::OBBToOBB(RigidbodyComponent * rb1, RigidbodyComponent * rb2, f
 
 			//Flip normal if we need to
 			manifold.m_points.push_back(contactPoint);
-			manifold.m_normal = m_axisOfMinimumPenetration;//@We follow convention to point towards A
+			manifold.m_normal = -m_axisOfMinimumPenetration;//@We follow convention to point towards A
 			m_solver.m_collidingPairs.push_back(manifold);
 		}
 	}
@@ -778,6 +779,7 @@ bool NarrowPhase::OBBToOBB(RigidbodyComponent * rb1, RigidbodyComponent * rb2, f
 }
 DirectX::SimpleMath::Vector3 NarrowPhase::FindIntersectionWithPlaneFromDistances(DirectX::SimpleMath::Vector3 start, DirectX::SimpleMath::Vector3 end, float d1, float d2)
 {
+	//@Using linear interpolation
 	float absD = abs(d1);
 	float absD2 = abs(d2);
 	return Vector3::Lerp(start, end, absD / (absD + absD2));
