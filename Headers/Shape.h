@@ -4,8 +4,7 @@
 //@Broad phase
 //@BoundingVolumes
 struct AABB {
-	DirectX::SimpleMath::Vector3 m_center;
-	DirectX::SimpleMath::Vector3 m_halfExtent;
+	DirectX::SimpleMath::Vector3 m_halfExtents;
 };
 
 //@To avoid convoluted shape downcasts

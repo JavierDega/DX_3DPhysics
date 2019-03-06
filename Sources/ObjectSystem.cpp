@@ -203,6 +203,11 @@ void ObjectSystem::LoadScene( unsigned int index)
 		case 1:
 		{
 
+			GameObject * obb3 = new GameObject("OBB3", Vector3(0, -10, -10.f));
+			RigidbodyComponent * rb3 = new RigidbodyComponent(Vector3(15.f, 0.5, 15.f), 10.f, true, DirectX::Colors::Green);
+			obb3->AddComponent(rb3);
+			AddObject(obb3);
+
 			GameObject * obb1 = new GameObject("OBB1", Vector3( -1, 0, -10.f));
 			RigidbodyComponent * rb1 = new RigidbodyComponent(Vector3(0.5, 0.5, 0.5));
 			rb1->m_force += Vector3( 500, 0, 0);
@@ -210,17 +215,12 @@ void ObjectSystem::LoadScene( unsigned int index)
 			obb1->AddComponent(rb1);
 			AddObject(obb1);
 
-			GameObject * obb2 = new GameObject("OBB2", Vector3( 1, 0, -10.f), Quaternion::CreateFromYawPitchRoll(0.2, 0.2, 0.2));
+			GameObject * obb2 = new GameObject("OBB2", Vector3( 1, 0, -10.f), Quaternion::CreateFromYawPitchRoll(0.6, 0.6, 0.6));
 			RigidbodyComponent * rb2 = new RigidbodyComponent(Vector3(0.5, 0.5, 0.5));
 			rb2->m_force += Vector3( -500, 0, 0);
-			//rb2->m_torque += Vector3(400, 0, 0);
+			rb2->m_torque += Vector3(400, 0, 0);
 			obb2->AddComponent(rb2);
 			AddObject(obb2);
-
-			GameObject * obb3 = new GameObject("OBB3", Vector3( 0,  -10, -10.f));
-			RigidbodyComponent * rb3 = new RigidbodyComponent(Vector3(15.f, 0.5, 15.f), 10.f, true, DirectX::Colors::Green);
-			obb3->AddComponent(rb3);
-			AddObject(obb3);
 
 		}
 		break;

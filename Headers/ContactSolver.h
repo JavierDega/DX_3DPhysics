@@ -3,16 +3,13 @@
 #include "RigidbodyComponent.h"
 #include <vector>
 
-struct ContactPoint {
-	DirectX::SimpleMath::Vector3 m_position;
-	float m_penetration;
-};
 struct ContactManifold {
 
 	std::pair<RigidbodyComponent*, RigidbodyComponent*> m_rigidbodies;
 	//@Four points tend to be enough for stable manifolds
-	std::vector<ContactPoint> m_points;
+	std::vector<DirectX::SimpleMath::Vector3> m_points;
 	DirectX::SimpleMath::Vector3 m_normal;
+	float m_maxPenetration;//Penetration value
 };
 //@Everything logged here is already 
 class ContactSolver

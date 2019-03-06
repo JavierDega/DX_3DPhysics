@@ -18,8 +18,6 @@ public:
 
 	//@Helpful queries
 	DirectX::SimpleMath::Vector3 FindIntersectionWithPlaneFromDistances(DirectX::SimpleMath::Vector3 start, DirectX::SimpleMath::Vector3 end, float d1, float d2);
-	DirectX::SimpleMath::Vector3 QueryOBBEdgeContact(RigidbodyComponent * rb1, RigidbodyComponent * rb2, DirectX::SimpleMath::Vector3 edge1Dir, DirectX::SimpleMath::Vector3 edge2Dir,
-		DirectX::SimpleMath::Vector3 axisOfMinimumPenetration, float penetrationDepth);
 	//Closest point on plane to point
 	DirectX::SimpleMath::Vector3 ClosestPtPointPlane(DirectX::SimpleMath::Vector3 point, DirectX::SimpleMath::Plane plane);
 	//Dist to plane

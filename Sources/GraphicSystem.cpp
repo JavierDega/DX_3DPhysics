@@ -99,7 +99,7 @@ void GraphicSystem::Update(float dt) {
 		//@Debug draw (Wireframes) (Only take into account position and shape properties, nor rotation nor scale)
 		if (ps->m_AABBCulling.isEnabled) {
 			//Create local primitive
-			currentRb->m_shape->m_cullingPrimitive = GeometricPrimitive::CreateBox(m_deviceContext, currentRb->m_shape->m_AABB.m_halfExtent * 2);
+			currentRb->m_shape->m_cullingPrimitive = GeometricPrimitive::CreateBox(m_deviceContext, currentRb->m_shape->m_AABB.m_halfExtents * 2);
 			//If its enabled, the PhysicsSystem, should of have computed, and updated, the AABB
 			currentRb->m_shape->m_cullingPrimitive->Draw( translation, view, m_proj, currentRb->m_shape->m_AABBColor, nullptr, true);
 		}

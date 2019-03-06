@@ -102,7 +102,7 @@ void PhysicSystem::UpdatePhysics(float dt) {
 	vector<pair<RigidbodyComponent*, RigidbodyComponent*>> m_pairs;
 
 	//@Clear debug colors
-	for (RigidbodyComponent* rb : m_rigidbodies){
+	for (RigidbodyComponent* rb : m_rigidbodies) {
 		rb->m_shape->m_AABBColor = Colors::Red;
 		rb->m_shape->m_sphereColor = Colors::Red;
 	}
@@ -121,8 +121,9 @@ void PhysicSystem::UpdatePhysics(float dt) {
 		{
 			//Calculate generalized forces
 			currentRb->m_force -= m_airViscosity * currentRb->m_velocity;//@Viscosity
-			currentRb->m_force += m_gravity*currentRb->m_mass;//@force relative to mass
+			currentRb->m_force += m_gravity * currentRb->m_mass;//@force relative to mass
 			//@Angular drag?
+			currentRb->m_torque -= m_airViscosity * currentRb->m_angularVelocity;
 
 			//Apply forces
 			currentRb->m_acceleration = currentRb->m_force / currentRb->m_mass;
@@ -140,20 +141,24 @@ void PhysicSystem::UpdatePhysics(float dt) {
 		//Forces are computed every frame
 		currentRb->m_force = Vector3::Zero;
 		currentRb->m_torque = Vector3::Zero;
-		//@SSScheme
+	}
+
+	//@SSScheme
+	for (unsigned int i = 0; i <m_rigidbodies.size();i++){
+		//Each rb checks upwards, so we avoid duplicate colliders.
 		//@BroadPhase
 		for (unsigned int j = i + 1; j < m_rigidbodies.size(); j++) {
 			//@To avoid double checks, we only check upwards
-			if(BroadPhase(currentRb, m_rigidbodies[j])) m_pairs.push_back(make_pair(currentRb, m_rigidbodies[j]));
+			if (BroadPhase(m_rigidbodies[i], m_rigidbodies[j])) m_pairs.push_back(make_pair(m_rigidbodies[i], m_rigidbodies[j]));
 		}
 	}
-
 	//@Start nulling out collider pairs
 	//@Medium Phase
 	//@Narrow Phase
 	for (unsigned int i = 0; i < m_pairs.size(); i++) {
 		ComputeNarrowPhase(m_pairs[i].first, m_pairs[i].second, dt);
 	}
+
 	///@Surviving pairs, with contact points, penetration and normal information have been logged to solver and MUST be colliding
 	m_narrowPhase.m_solver.Solve(dt);
 }
@@ -162,20 +167,40 @@ bool PhysicSystem::BroadPhase(RigidbodyComponent * rb1, RigidbodyComponent * rb2
 
 	if (rb1->m_isKinematic && rb2->m_isKinematic) return false;//@Two kinematic colliders dont need collision response
 
-
+	TransformComponent t1 = rb1->m_owner->m_transform;
+	TransformComponent t2 = rb2->m_owner->m_transform;
 	//@Compute AABB
 	if (m_sphereCulling.isEnabled) {
 		//@Same process
 	
 	}
 	if (m_AABBCulling.isEnabled) {
-
+		/*Christer Ericson's
+		int TestAABBAABB(AABB a, AABB b) 
+		{
+		if (Abs(a.c[0] - b.c[0]) > (a.r[0] + b.r[0])) return 0;
+		if (Abs(a.c[1] - b.c[1]) > (a.r[1] + b.r[1])) return 0;
+		if (Abs(a.c[2] - b.c[2]) > (a.r[2] + b.r[2])) return 0;
+		return 1;
+		}*/
 		//Get aabbs depending on shape, and transform state (Rotation)
 		AABB box1 = ComputeAABB(rb1);
 		AABB box2 = ComputeAABB(rb2);
 
-		//Define bounds
-		float thisRight = box1.m_center.x + box1.m_halfExtent.x; float otherRight = box2.m_center.x + box2.m_halfExtent.x;
+		float diffX = abs(t1.m_position.x - t2.m_position.x);
+		float sum = box1.m_halfExtents.x + box2.m_halfExtents.x;
+		if (abs(t1.m_position.x - t2.m_position.x) > (box1.m_halfExtents.x + box2.m_halfExtents.x)) {
+			return false;
+		}
+		if (abs(t1.m_position.y - t2.m_position.y) > (box1.m_halfExtents.y + box2.m_halfExtents.y)) {
+			return false;
+		}
+		if (abs(t1.m_position.z - t2.m_position.z) > (box1.m_halfExtents.z + box2.m_halfExtents.z)) {
+			return false;
+		}
+		
+		/*OTHER APPROACH 
+		float thisRight = t1.m_position.x + box1.m_halfExtent.x; float otherRight = box2.m_center.x + box2.m_halfExtent.x;
 		float thisLeft = box1.m_center.x - box1.m_halfExtent.x; float otherLeft = box2.m_center.x - box2.m_halfExtent.x;
 		float thisTop = box1.m_center.y + box1.m_halfExtent.y; float otherTop = box2.m_center.y + box2.m_halfExtent.y;
 		float thisBottom = box1.m_center.y - box1.m_halfExtent.y; float otherBottom = box2.m_center.y - box2.m_halfExtent.y;
@@ -189,7 +214,8 @@ bool PhysicSystem::BroadPhase(RigidbodyComponent * rb1, RigidbodyComponent * rb2
 			return false;
 
 		if ( thisFront < otherBack || thisBack > otherFront)
-			return false;
+			return false;*/
+
 			
 		//@Otherwise
 		rb1->m_shape->m_AABBColor = Colors::Yellow;
@@ -227,7 +253,7 @@ AABB PhysicSystem::ComputeAABB(RigidbodyComponent * rb)
 		case ShapeType::SPHERE:
 		{
 			Sphere* sphere = dynamic_cast<Sphere*>(rb->m_shape);
-			sphere->m_AABB = AABB{ rb->m_owner->m_transform.m_position, Vector3(sphere->m_radius, sphere->m_radius, sphere->m_radius) };
+			sphere->m_AABB = AABB{ Vector3(sphere->m_radius, sphere->m_radius, sphere->m_radius) };
 		}
 		break;
 		case ShapeType::OBB:
@@ -252,18 +278,13 @@ AABB PhysicSystem::ComputeAABB(RigidbodyComponent * rb)
 			*/
 			//@People seem to like to do this from matrices, I'm not smart enough to derive another approach for now
 			XMFLOAT4X4 m = Matrix::CreateFromQuaternion(rb->m_owner->m_transform.m_rotation);//m[3][3]
-			//float t[3] = { rb->m_owner->m_transform.m_position.x, rb->m_owner->m_transform.m_position.y, rb->m_owner->m_transform.m_position.z };//t[3], is also a.c
 			float ar[3] = { obb->m_halfExtents.x, obb->m_halfExtents.y, obb->m_halfExtents.z };
-			//float * bc[3] = { &obb->m_AABB.m_center.x, &obb->m_AABB.m_center.y, &obb->m_AABB.m_center.z };// b.c
-			obb->m_AABB.m_center = rb->m_owner->m_transform.m_position;
-			float * br[3] = { &obb->m_AABB.m_halfExtent.x, &obb->m_AABB.m_halfExtent.y, &obb->m_AABB.m_halfExtent.z }; //b.r
+			float * br[3] = { &obb->m_AABB.m_halfExtents.x, &obb->m_AABB.m_halfExtents.y, &obb->m_AABB.m_halfExtents.z }; //b.r
 
 			for (int i = 0; i < 3; i++) {
-				//*bc[i] = t[i];
 				*br[i] = 0.0f;
 				for (int j = 0; j < 3; j++) {
-					//*bc[i] += m(i,j) * t[j];
-					*br[i] += abs(m(i, j)) * ar[j];
+					*br[i] += abs(m(j, i)) * ar[j];//Flipped matrix components given we dont know DirectX's convention.
 				}
 			}
 #pragma endregion

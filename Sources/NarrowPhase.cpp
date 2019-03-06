@@ -48,11 +48,9 @@ bool NarrowPhase::SphereToSphere(RigidbodyComponent * rb1, RigidbodyComponent * 
 		Vector3 surfacePoint1 = t1->m_position - normal * sphere1->m_radius;
 		Vector3 surfacePoint2 = t2->m_position + normal * sphere2->m_radius;
 
-		ContactPoint contactPoint;
-		contactPoint.m_penetration = overlap;
-		contactPoint.m_position = surfacePoint1 + (surfacePoint2 - surfacePoint1)*0.5f;
-
 		ContactManifold manifold;
+		Vector3 contactPoint = surfacePoint1 + (surfacePoint2 - surfacePoint1)*0.5f;
+		manifold.m_maxPenetration = overlap;
 		manifold.m_rigidbodies.first = rb1;
 		manifold.m_rigidbodies.second = rb2;
 		manifold.m_points.push_back(contactPoint);
@@ -96,14 +94,12 @@ bool NarrowPhase::SphereToOBB(RigidbodyComponent * rb1, RigidbodyComponent * rb2
 		float dist = sqrtf(distSq);
 		float overlap = (sphere1->m_radius - dist);//@Should always be positive value
 		Vector3 normal = v / dist;
-		ContactPoint contactPoint;
-		contactPoint.m_penetration = overlap;
-		contactPoint.m_position = closestPoint;
 
 		ContactManifold manifold;
+		manifold.m_maxPenetration = overlap;
 		manifold.m_rigidbodies.first = rb1;
 		manifold.m_rigidbodies.second = rb2;
-		manifold.m_points.push_back(contactPoint);
+		manifold.m_points.push_back(closestPoint);
 		manifold.m_normal = normal;
 		m_solver.m_collidingPairs.push_back(manifold);
 
@@ -208,16 +204,17 @@ bool NarrowPhase::OBBToOBB(RigidbodyComponent * rb1, RigidbodyComponent * rb2, f
 	float be[3] = { b->m_halfExtents.x, b->m_halfExtents.y, b->m_halfExtents.z };
 
 	// Compute rotation matrix expressing b in a’s coordinate frame 
-	//for (int i = 0; i < 3; i++)
-	//	for (int j = 0; j < 3; j++)
-	//		R.m[i][j] = au[i].Dot(bu[j]);
+	for (int i = 0; i < 3; i++)
+		for (int j = 0; j < 3; j++)
+			R.m[i][j] = au[i].Dot(bu[j]);
 
-	R = ma * mb;
+	//R = ma * mb;
 
 	// Compute translation vector t 
 	Vector3 tv = rb2->m_owner->m_transform.m_position - rb1->m_owner->m_transform.m_position;
 	// Bring translation into a’s coordinate frame 
 	float t[3] = { tv.Dot(au[0]), tv.Dot(au[1]), tv.Dot(au[2]) };//@POSSIBLE ERRATA(YUP)
+	Vector3 translationVector = Vector3(t[0], t[1], t[2]);//Translation vector from A's coordinate frame
 
 	//@@ALTERNATIVE: Manually detecting degenerate case (When two edges are parallel) and skipping all edge cross product axes if so
 	//It can be proven that not false positives will come in this case https://www.randygaul.net/2014/05/22/deriving-obb-to-obb-intersection-sat/
@@ -236,7 +233,9 @@ bool NarrowPhase::OBBToOBB(RigidbodyComponent * rb1, RigidbodyComponent * rb2, f
 	bool m_isFaceToFaceCollision;
 	bool m_isFace1;//Whether reference face is on shape 1 or 2
 	Vector3 m_edge1Dir, m_edge2Dir;
+	unsigned int m_edge1Index, m_edge2Index;//@Starts to be too much data?
 	unsigned int m_faceIndex;
+
 	//@Something to face case (Find incident face, reference face,..)
 	// Test axes L = A0, L = A1, L = A2 
 	for (int i = 0; i < 3; i++)
@@ -287,10 +286,12 @@ bool NarrowPhase::OBBToOBB(RigidbodyComponent * rb1, RigidbodyComponent * rb2, f
 		float curPenetration = (ra + rb) - abs(t[2] * R.m[1][0] - t[1] * R.m[2][0]);
 		if (curPenetration < m_penetrationDepth) {
 			m_penetrationDepth = curPenetration;
-			m_axisOfMinimumPenetration = au[0].Cross(AbsR.Right());
+			m_axisOfMinimumPenetration = localBasis[0].Cross(AbsR.Right());
 			m_isFaceToFaceCollision = false;
-			m_edge1Dir = au[0];
+			m_edge1Dir = localBasis[0];
+			m_edge1Index = 0;
 			m_edge2Dir = AbsR.Right();
+			m_edge2Index = 0;
 		}
 	}
 
@@ -304,10 +305,13 @@ bool NarrowPhase::OBBToOBB(RigidbodyComponent * rb1, RigidbodyComponent * rb2, f
 		float curPenetration = (ra + rb) - abs(t[2] * R.m[1][1] - t[1] * R.m[2][1]);
 		if (curPenetration < m_penetrationDepth) {
 			m_penetrationDepth = curPenetration;
-			m_axisOfMinimumPenetration = au[0].Cross(AbsR.Up());
+			m_axisOfMinimumPenetration = localBasis[0].Cross(AbsR.Up());//@NOT IN LOCAL SPACE
+			//IN LOCAL SPACE, THE EDGEA WOULD BE IDENTITY.RIGHT(). AbsR however should be right.
 			m_isFaceToFaceCollision = false;
-			m_edge1Dir = au[0];
+			m_edge1Dir = localBasis[0];
+			m_edge1Index = 0;
 			m_edge2Dir = AbsR.Up();
+			m_edge2Index = 1;
 		}
 	}
 
@@ -320,10 +324,12 @@ bool NarrowPhase::OBBToOBB(RigidbodyComponent * rb1, RigidbodyComponent * rb2, f
 		float curPenetration = (ra + rb) - abs(t[2] * R.m[1][2] - t[1] * R.m[2][2]);
 		if (curPenetration < m_penetrationDepth) {
 			m_penetrationDepth = curPenetration;
-			m_axisOfMinimumPenetration = au[0].Cross(AbsR.Forward());
+			m_axisOfMinimumPenetration = localBasis[0].Cross(AbsR.Forward());
 			m_isFaceToFaceCollision = false;
-			m_edge1Dir = au[0];
+			m_edge1Dir = localBasis[0];
+			m_edge1Index = 0;
 			m_edge2Dir = AbsR.Forward();
+			m_edge2Index = 2;
 		}
 	}
 
@@ -336,10 +342,12 @@ bool NarrowPhase::OBBToOBB(RigidbodyComponent * rb1, RigidbodyComponent * rb2, f
 		float curPenetration = (ra + rb) - abs(t[0] * R.m[2][0] - t[2] * R.m[0][0]);
 		if (curPenetration < m_penetrationDepth) {
 			m_penetrationDepth = curPenetration;
-			m_axisOfMinimumPenetration = au[1].Cross(AbsR.Right());
+			m_axisOfMinimumPenetration = localBasis[1].Cross(AbsR.Right());
 			m_isFaceToFaceCollision = false;
-			m_edge1Dir = au[1];
+			m_edge1Dir = localBasis[1];
+			m_edge1Index = 1;
 			m_edge2Dir = AbsR.Right();
+			m_edge2Index = 0;
 		}
 	}
 
@@ -352,10 +360,12 @@ bool NarrowPhase::OBBToOBB(RigidbodyComponent * rb1, RigidbodyComponent * rb2, f
 		float curPenetration = (ra + rb) - abs(t[0] * R.m[2][1] - t[2] * R.m[0][1]);
 		if (curPenetration < m_penetrationDepth) {
 			m_penetrationDepth = curPenetration;
-			m_axisOfMinimumPenetration = au[1].Cross(AbsR.Up());
+			m_axisOfMinimumPenetration = localBasis[1].Cross(AbsR.Up());
 			m_isFaceToFaceCollision = false;
-			m_edge1Dir = au[1];
+			m_edge1Dir = localBasis[1];
+			m_edge1Index = 1;
 			m_edge2Dir = AbsR.Up();
+			m_edge2Index = 1;
 		}
 	}
 
@@ -368,10 +378,12 @@ bool NarrowPhase::OBBToOBB(RigidbodyComponent * rb1, RigidbodyComponent * rb2, f
 		float curPenetration = (ra + rb) - abs(t[0] * R.m[2][2] - t[2] * R.m[0][2]);
 		if (curPenetration < m_penetrationDepth) {
 			m_penetrationDepth = curPenetration;
-			m_axisOfMinimumPenetration = au[1].Cross(AbsR.Forward());
+			m_axisOfMinimumPenetration = localBasis[1].Cross(AbsR.Forward());
 			m_isFaceToFaceCollision = false;
-			m_edge1Dir = au[1];
+			m_edge1Dir = localBasis[1];
+			m_edge1Index = 1;
 			m_edge2Dir = AbsR.Forward();
+			m_edge2Index = 2;
 		}
 	}
 
@@ -384,10 +396,12 @@ bool NarrowPhase::OBBToOBB(RigidbodyComponent * rb1, RigidbodyComponent * rb2, f
 		float curPenetration = (ra + rb) - abs(t[1] * R.m[0][0] - t[0] * R.m[1][0]);
 		if (curPenetration < m_penetrationDepth) {
 			m_penetrationDepth = curPenetration;
-			m_axisOfMinimumPenetration = au[2].Cross(AbsR.Right());
+			m_axisOfMinimumPenetration = localBasis[2].Cross(AbsR.Right());
 			m_isFaceToFaceCollision = false;
-			m_edge1Dir = au[2];
+			m_edge1Dir = localBasis[2];
+			m_edge1Index = 2;
 			m_edge2Dir = AbsR.Right();
+			m_edge2Index = 0;
 		}
 	}
 
@@ -400,10 +414,12 @@ bool NarrowPhase::OBBToOBB(RigidbodyComponent * rb1, RigidbodyComponent * rb2, f
 		float curPenetration = (ra + rb) - abs(t[1] * R.m[0][1] - t[0] * R.m[1][1]);
 		if (curPenetration < m_penetrationDepth) {
 			m_penetrationDepth = curPenetration;
-			m_axisOfMinimumPenetration = au[2].Cross(AbsR.Up());
+			m_axisOfMinimumPenetration = localBasis[2].Cross(AbsR.Up());
 			m_isFaceToFaceCollision = false;
-			m_edge1Dir = au[2];
+			m_edge1Dir = localBasis[2];
+			m_edge1Index = 2;
 			m_edge2Dir = AbsR.Up();
+			m_edge2Index = 1;
 		}
 	}
 
@@ -416,10 +432,12 @@ bool NarrowPhase::OBBToOBB(RigidbodyComponent * rb1, RigidbodyComponent * rb2, f
 		float curPenetration = (ra + rb) - abs(t[1] * R.m[0][2] - t[0] * R.m[1][2]);
 		if (curPenetration < m_penetrationDepth) {
 			m_penetrationDepth = curPenetration;
-			m_axisOfMinimumPenetration = au[2].Cross(AbsR.Forward());
+			m_axisOfMinimumPenetration = localBasis[2].Cross(AbsR.Forward());
 			m_isFaceToFaceCollision = false;
-			m_edge1Dir = au[2];
+			m_edge1Dir = localBasis[2];
+			m_edge1Index = 2;
 			m_edge2Dir = AbsR.Forward();
+			m_edge2Index = 2;
 		}
 	}
 
@@ -429,49 +447,63 @@ bool NarrowPhase::OBBToOBB(RigidbodyComponent * rb1, RigidbodyComponent * rb2, f
 //@We move all necessary data to global space, and we solve for our contacts THERE
 //@WE SOLVE IN LOCAL SPACE
 //https://www.randygaul.net/2014/05/22/deriving-obb-to-obb-intersection-sat/
+
+
+	ContactManifold manifold;
+	manifold.m_maxPenetration = m_penetrationDepth;
+	manifold.m_rigidbodies.first = rb1;
+	manifold.m_rigidbodies.second = rb2;
+	
+	Matrix axisMatrix = Matrix::CreateTranslation(m_axisOfMinimumPenetration);
+	axisMatrix *= ma.Invert();
+	Vector3 globalAxis = axisMatrix.Translation();
+	//Flip normal if we need to
+	manifold.m_normal = (globalAxis.Dot(tv) > 0) ? (-globalAxis) : (globalAxis);//@We follow convention to point towards A
+
 	if (m_isFaceToFaceCollision) {
 		//Identify axis of minimum penetration using the SAT (This defines the reference face)
 		//Find the most anti parallel face on other shape(this defines the incident face)
 		//Clipping incident face to reference face (Sutherman-Hodgmann clipping)
 		//Incident face is the one which most faces the axisOfminimumPenetration (dot product is smaller)
 		Plane referencePlane;//Plane in local space
+		Vector3 incidentFaceNormal;
+		float direction;
+		unsigned int incidentFaceIndex;
+		Vector3 centreOfFace;
+		Vector3 facePoints[4];
+		//@The orthonormal planes to the reference plane, to define our area for Sutherland-Clipping (Their normals point inwards)
+		Plane supportPlanes[4];
+
 		if (m_isFace1) {
-			//m_axisOfMinimumPenetration comes from rb1
-			Vector3 oneToTwo = t2.m_position - t1.m_position;
-			//We want the axis to point outwards from OBB2
-			m_axisOfMinimumPenetration = (m_axisOfMinimumPenetration.Dot(oneToTwo) >= 0) ? (m_axisOfMinimumPenetration) : (-m_axisOfMinimumPenetration);
+#pragma region Reference / Incident face
+			//We want the axis to point outwards from OBB1
+			m_axisOfMinimumPenetration = (m_axisOfMinimumPenetration.Dot(translationVector) >= 0) ? (m_axisOfMinimumPenetration) : (-m_axisOfMinimumPenetration);
 			//@We flip the referencePlane for clipping
 			referencePlane = Plane(-m_axisOfMinimumPenetration, -ae[m_faceIndex]);//We can also use au[m_faceIndex] instead of m_axisOfMinimumPenetration
 
 			//We need to find the incident face, that is, the one that most faces (Most negative dot product) the axisOfMinimumPenetration, in rb2
-			Vector3 possibleFaces[3] = { R.Right(), R.Up(), R.Forward() };
 			float minDot = FLT_MAX;
-			Vector3 incidentFaceNormal;
-			unsigned int incidentFaceIndex;
-			float direction;
 			for (int i = 0; i < 3; i++) {
 				//@Each basis corresponds to two, opposite face normals
 				//Face1
-				float currentDot = m_axisOfMinimumPenetration.Dot(possibleFaces[i]);
+				float currentDot = m_axisOfMinimumPenetration.Dot(bRotatedAxes[i]);
 				if (currentDot < minDot) {
 					minDot = currentDot;
-					incidentFaceNormal = possibleFaces[i];
+					incidentFaceNormal = bRotatedAxes[i];
 					incidentFaceIndex = i;
 					direction = 1;
 				}
 				//Face2
-				currentDot = m_axisOfMinimumPenetration.Dot(-possibleFaces[i]);
+				currentDot = m_axisOfMinimumPenetration.Dot(-bRotatedAxes[i]);
 				if (currentDot < minDot) {
 					minDot = currentDot;
-					incidentFaceNormal = -possibleFaces[i];
+					incidentFaceNormal = -bRotatedAxes[i];
 					incidentFaceIndex = i;
 					direction = -1;
 				}
 			}
 			//tv is our translation vector for object2, i.e, the centerpoint of OBB2
-			Vector3 translationVector = Vector3(t[0], t[1], t[2]);//Translation vector from A's coordinate frame
-			Vector3 centreOfFace = translationVector + direction * possibleFaces[incidentFaceIndex] * be[incidentFaceIndex];
-			Vector3 facePoints[4];
+			centreOfFace = translationVector + direction * bRotatedAxes[incidentFaceIndex] * be[incidentFaceIndex];
 			//@We need more data: The points that define the face whose outward normal = incidentFaceNormal
 			switch (incidentFaceIndex) {
 			case 0:
@@ -485,16 +517,16 @@ bool NarrowPhase::OBBToOBB(RigidbodyComponent * rb1, RigidbodyComponent * rb2, f
 				Vector3 Backward = AbsR.Backward();*/
 				//We want to get to the top back vector, meaning we'll use be.y and be.z as magnitude multipliers
 				//The direction comes from AbsR, the rotated matrix
-				facePoints[0] = centreOfFace + R.Up()*b->m_halfExtents.y + R.Backward()*b->m_halfExtents.z;
+				facePoints[0] = centreOfFace + AbsR.Up()*b->m_halfExtents.y + AbsR.Backward()*b->m_halfExtents.z;
 
 				//TOP front: We derive it from previous point, top back
-				facePoints[1] = facePoints[0] + R.Forward()*b->m_halfExtents.z * 2;
+				facePoints[1] = facePoints[0] + AbsR.Forward()*b->m_halfExtents.z * 2;
 
 				//Bottom front: from previous
-				facePoints[2] = facePoints[1] + R.Down()*b->m_halfExtents.y * 2;
+				facePoints[2] = facePoints[1] + AbsR.Down()*b->m_halfExtents.y * 2;
 
 				//Bottom back: from previous
-				facePoints[3] = facePoints[2] + R.Backward()*b->m_halfExtents.z * 2;
+				facePoints[3] = facePoints[2] + AbsR.Backward()*b->m_halfExtents.z * 2;
 
 
 			}
@@ -502,35 +534,35 @@ bool NarrowPhase::OBBToOBB(RigidbodyComponent * rb1, RigidbodyComponent * rb2, f
 			case 1:
 				//Y
 				//Get left front
-				facePoints[0] = centreOfFace + R.Forward()*b->m_halfExtents.z + R.Left()*b->m_halfExtents.x;
+				facePoints[0] = centreOfFace + AbsR.Forward()*b->m_halfExtents.z + AbsR.Left()*b->m_halfExtents.x;
 
 				//Left back
-				facePoints[1] = facePoints[0] + R.Backward()*b->m_halfExtents.z * 2;
+				facePoints[1] = facePoints[0] + AbsR.Backward()*b->m_halfExtents.z * 2;
 
 				//Right back
-				facePoints[2] = facePoints[1] + R.Right()*b->m_halfExtents.x * 2;
+				facePoints[2] = facePoints[1] + AbsR.Right()*b->m_halfExtents.x * 2;
 
 				//Right front
-				facePoints[3] = facePoints[2] + R.Forward()*b->m_halfExtents.z * 2;
+				facePoints[3] = facePoints[2] + AbsR.Forward()*b->m_halfExtents.z * 2;
 				break;
 			case 2:
 				//Z
 				//Get top left
-				facePoints[0] = centreOfFace + R.Up()*b->m_halfExtents.y + R.Left()*b->m_halfExtents.x;
+				facePoints[0] = centreOfFace + AbsR.Up()*b->m_halfExtents.y + AbsR.Left()*b->m_halfExtents.x;
 
 				//Top right
-				facePoints[1] = facePoints[0] + R.Right()*b->m_halfExtents.x * 2;
+				facePoints[1] = facePoints[0] + AbsR.Right()*b->m_halfExtents.x * 2;
 
 				//Bottom right
-				facePoints[2] = facePoints[1] + R.Down()*b->m_halfExtents.y * 2;
+				facePoints[2] = facePoints[1] + AbsR.Down()*b->m_halfExtents.y * 2;
 
 				//Bottom left
-				facePoints[3] = facePoints[2] + R.Left()*b->m_halfExtents.x * 2;
+				facePoints[3] = facePoints[2] + AbsR.Left()*b->m_halfExtents.x * 2;
 				break;
 			}
+#pragma endregion
 
-			//@The orthonormal planes to the reference plane, to define our area for Sutherland-Clipping (Their normals point inwards)
-			Plane supportPlanes[4];
+#pragma region Reference planes
 			switch (m_faceIndex) {
 			case 0:
 				//orthonormal planes to x plane
@@ -555,85 +587,39 @@ bool NarrowPhase::OBBToOBB(RigidbodyComponent * rb1, RigidbodyComponent * rb2, f
 				break;
 			}
 
-			//We have all the data we need now
-			vector<Vector3> contactPoints = OBBClip(facePoints, supportPlanes, referencePlane);
-			vector<Vector3> finalContactPoints;
-
-			if (contactPoints.size() == 0) return false;
-			//Filter out all contactPoints on the reference plane's surface.
-			for (unsigned int i = 0; i < contactPoints.size(); i++) {
-				if (DistPointPlane(contactPoints[i], referencePlane) > 0) {
-					finalContactPoints.push_back(contactPoints[i]);
-				}
-			}
-			//@WE SKIP THIS PART IF WE USE MULTIPLE CONTACT POINTS, WITH SEQUENTIAL IMPULSES
-			Vector3 avgPoint = Vector3::Zero;
-			for (unsigned int i = 0; i < finalContactPoints.size(); i++) {
-				avgPoint += finalContactPoints[i];
-			}
-			avgPoint *= (float)1 / finalContactPoints.size();
-
-
-			ContactPoint contactPoint;
-			contactPoint.m_penetration = m_penetrationDepth;
-			//@Bring the contact point into Global space
-			//@WE LACK MOVING THE CONTACT POINTS INTO THE REFERENCE PLANE, WHICH IS REALLY THE RIGHT CONTACT POINT
-			Matrix pointMatrix = Matrix::CreateTranslation(avgPoint);
-			pointMatrix *= ma.Invert();
-			avgPoint = pointMatrix.Translation();
-			avgPoint += t1.m_position;
-			contactPoint.m_position = avgPoint;
-
-			ContactManifold manifold;
-			manifold.m_rigidbodies.first = rb1;
-			manifold.m_rigidbodies.second = rb2;
-
-			//Flip normal if we need to
-			manifold.m_points.push_back(contactPoint);
-			manifold.m_normal = -m_axisOfMinimumPenetration;//@We follow convention to point towards A
-			m_solver.m_collidingPairs.push_back(manifold);
+#pragma endregion
 		}
 		else {
 			//m_axisOfMinimumPenetration comes from rb2
-			//@We flip the referencePlane for clipping
-			Vector3 twoToOne = t1.m_position - t2.m_position;
 			//We want the axis to point outwards from OBB2
-			//@THE AXIS SHOULD BE IN LOCAL SPACE TOO YOU TONTUNO
-			m_axisOfMinimumPenetration = (m_axisOfMinimumPenetration.Dot(twoToOne) >= 0) ? (m_axisOfMinimumPenetration) : (-m_axisOfMinimumPenetration);
+			m_axisOfMinimumPenetration = (m_axisOfMinimumPenetration.Dot(translationVector) > 0) ? (-m_axisOfMinimumPenetration) : (m_axisOfMinimumPenetration);
 			//Right now we want to find the right normal direction to get the reference plane
-			Vector3 bCentre = Vector3(t[0], t[1], t[2]);
-
-			referencePlane = Plane(bCentre + m_axisOfMinimumPenetration * be[m_faceIndex], -m_axisOfMinimumPenetration);//We flip the normal for later clipping algorithm
+			referencePlane = Plane(translationVector + m_axisOfMinimumPenetration * be[m_faceIndex], -m_axisOfMinimumPenetration);//We flip the normal for later clipping algorithm
 
 			//We need to find the incident face, that is, the one that most faces (Most negative dot product) the axisOfMinimumPenetration, in rb1
-			Vector3 possibleFaces[3] = { localBasis[0], localBasis[1], localBasis[2] };//We can use the localBasis for this.
 			float minDot = FLT_MAX;
-			Vector3 incidentFaceNormal;
-			unsigned int incidentFaceIndex;
-			float direction;
 			for (int i = 0; i < 3; i++) {
 				//@Each basis corresponds to two, opposite face normals
 				//Face1
-				float currentDot = m_axisOfMinimumPenetration.Dot(possibleFaces[i]);
+				float currentDot = m_axisOfMinimumPenetration.Dot(localBasis[i]);
 				if (currentDot < minDot) {
 					minDot = currentDot;
-					incidentFaceNormal = possibleFaces[i];
+					incidentFaceNormal = localBasis[i];
 					incidentFaceIndex = i;
 					direction = 1;
 				}
 				//Face2
-				currentDot = m_axisOfMinimumPenetration.Dot(-possibleFaces[i]);
+				currentDot = m_axisOfMinimumPenetration.Dot(-localBasis[i]);
 				if (currentDot < minDot) {
 					minDot = currentDot;
-					incidentFaceNormal = -possibleFaces[i];
+					incidentFaceNormal = -localBasis[i];
 					incidentFaceIndex = i;
 					direction = -1;
 				}
 			}
 			//tv is our translation vector for object2, i.e, the centerpoint of OBB2
 			//Vector3 translationVector = Vector3(t[0], t[1], t[2]);//Translation vector from A's coordinate frame
-			Vector3 centreOfFace = direction * possibleFaces[incidentFaceIndex] * ae[incidentFaceIndex];//Centre is at origin now, because its on object A
-			Vector3 facePoints[4];
+			centreOfFace = direction * localBasis[incidentFaceIndex] * ae[incidentFaceIndex];//Centre is at origin now, because its on object A
 			//@We need more data: The points that define the face whose outward normal = incidentFaceNormal
 			switch (incidentFaceIndex) {
 			case 0:
@@ -695,73 +681,54 @@ bool NarrowPhase::OBBToOBB(RigidbodyComponent * rb1, RigidbodyComponent * rb2, f
 			break;
 			}
 
-			//@The orthonormal planes to the reference plane, to define our area for Sutherland-Clipping (Their normals point inwards)
-			Plane supportPlanes[4];
 			switch (m_faceIndex) {
 			case 0:
 				//orthonormal planes to x plane
-				supportPlanes[0] = Plane(bCentre + be[1] * R.Up(), R.Down());//Plane pointing down, at the top of the OBB
-				supportPlanes[1] = Plane(bCentre + be[1] * R.Down(), R.Up());//Plane pointing up, at the bottom of the OBB
-				supportPlanes[2] = Plane(bCentre + be[2] * R.Backward(), R.Forward());//Plane pointing forward, at the back of the OBB
-				supportPlanes[3] = Plane(bCentre + be[2] * R.Forward(), R.Backward());//Plane pointing backward, at the front of the OBB
+				supportPlanes[0] = Plane(translationVector + be[1] * AbsR.Up(), AbsR.Down());//Plane pointing down, at the top of the OBB
+				supportPlanes[1] = Plane(translationVector + be[1] * AbsR.Down(), AbsR.Up());//Plane pointing up, at the bottom of the OBB
+				supportPlanes[2] = Plane(translationVector + be[2] * AbsR.Backward(), AbsR.Forward());//Plane pointing forward, at the back of the OBB
+				supportPlanes[3] = Plane(translationVector + be[2] * AbsR.Forward(), AbsR.Backward());//Plane pointing backward, at the front of the OBB
 				break;
 			case 1:
 				//orthonormal planes to y plane
-				supportPlanes[0] = Plane(bCentre + be[0] * R.Right(), R.Left());//Plane pointing left, at the right of the OBB
-				supportPlanes[1] = Plane(bCentre + be[0] * R.Left(), R.Right());//Plane pointing right, at the left of the OBB
-				supportPlanes[2] = Plane(bCentre + be[2] * R.Backward(), R.Forward());//Plane pointing forward, at the back of the OBB
-				supportPlanes[3] = Plane(bCentre + be[2] * R.Forward(), R.Backward());//Plane pointing backwards, at the front of the OBB
+				supportPlanes[0] = Plane(translationVector + be[0] * AbsR.Right(), AbsR.Left());//Plane pointing left, at the right of the OBB
+				supportPlanes[1] = Plane(translationVector + be[0] * AbsR.Left(), AbsR.Right());//Plane pointing right, at the left of the OBB
+				supportPlanes[2] = Plane(translationVector + be[2] * AbsR.Backward(), AbsR.Forward());//Plane pointing forward, at the back of the OBB
+				supportPlanes[3] = Plane(translationVector + be[2] * AbsR.Forward(), AbsR.Backward());//Plane pointing backwards, at the front of the OBB
 				break;
 			case 2:
 				//orthonormal planes to z plane
-				supportPlanes[0] = Plane(bCentre + be[0] * R.Right(), R.Left());//Plane pointing left, at the right of the OBB
-				supportPlanes[1] = Plane(bCentre + be[0] * R.Left(), R.Right());//Plane pointing right, at the left of the OBB
-				supportPlanes[2] = Plane(bCentre + be[1] * R.Up(), R.Down());//Plane pointing down, at the top of the OBB
-				supportPlanes[3] = Plane(bCentre + be[1] * R.Down(), R.Up());//Plane pointing upwards, at the bottom of the OBB
+				supportPlanes[0] = Plane(translationVector + be[0] * AbsR.Right(), AbsR.Left());//Plane pointing left, at the right of the OBB
+				supportPlanes[1] = Plane(translationVector + be[0] * AbsR.Left(), AbsR.Right());//Plane pointing right, at the left of the OBB
+				supportPlanes[2] = Plane(translationVector + be[1] * AbsR.Up(), AbsR.Down());//Plane pointing down, at the top of the OBB
+				supportPlanes[3] = Plane(translationVector + be[1] * AbsR.Down(), AbsR.Up());//Plane pointing upwards, at the bottom of the OBB
 				break;
 			}
 
-			//We have all the data we need now
-			vector<Vector3> contactPoints = OBBClip(facePoints, supportPlanes, referencePlane);
-			vector<Vector3> finalContactPoints;
+		}
+		//We have all the data we need now
+		vector<Vector3> contactPoints = OBBClip(facePoints, supportPlanes, referencePlane);
+		vector<Vector3> finalContactPoints;
 
-			//Filter out all contactPoints on the reference plane's surface.
-			for (unsigned int i = 0; i < contactPoints.size(); i++) {
-				if (DistPointPlane(contactPoints[i], referencePlane) > 0) {
-					finalContactPoints.push_back(contactPoints[i]);
-				}
+		if (contactPoints.size() == 0) return false;//@Just in case
+
+		//Filter out all contactPoints on the reference plane's surface.
+		for (unsigned int i = 0; i < contactPoints.size(); i++) {
+			if (DistPointPlane(contactPoints[i], referencePlane) > 0) {
+				finalContactPoints.push_back(ClosestPtPointPlane(contactPoints[i], referencePlane));
 			}
-			//@WE SKIP THIS PART IF WE USE MULTIPLE CONTACT POINTS, WITH SEQUENTIAL IMPULSES
-			Vector3 avgPoint = Vector3::Zero;
-			for (unsigned int i = 0; i < finalContactPoints.size(); i++) {
-				avgPoint += finalContactPoints[i];
-			}
-			avgPoint *= (float)1 / finalContactPoints.size();
-
-
-			ContactPoint contactPoint;
-			contactPoint.m_penetration = m_penetrationDepth;
-			//@Bring the contact point into Global space
-			//@WE LACK MOVING THE CONTACT POINTS INTO THE REFERENCE PLANE, WHICH IS REALLY THE RIGHT CONTACT POINT
-			Matrix pointMatrix = Matrix::CreateTranslation(avgPoint);
+		}
+		//Bring final points to global space
+		for (int i = 0; i < finalContactPoints.size(); i++) {
+			Matrix pointMatrix = Matrix::CreateTranslation(finalContactPoints[i]);
 			pointMatrix *= ma.Invert();
-			avgPoint = pointMatrix.Translation();
-			avgPoint += t1.m_position;
-			contactPoint.m_position = avgPoint;
-
-			ContactManifold manifold;
-			manifold.m_rigidbodies.first = rb1;
-			manifold.m_rigidbodies.second = rb2;
-
-			//Flip normal if we need to
-			manifold.m_points.push_back(contactPoint);
-			manifold.m_normal = -m_axisOfMinimumPenetration;//@We follow convention to point towards A
-			m_solver.m_collidingPairs.push_back(manifold);
+			Vector3 point = pointMatrix.Translation();
+			point += t1.m_position;
+			manifold.m_points.push_back(point);
 		}
 	}
 	else {
-		//m_axisOfMinimumPenetration = Vector3::Transform(m_axisOfMinimumPenetration, AbsR.Invert());SOLVE IN LOCAL SPACE
-		m_axisOfMinimumPenetration.Normalize();
+		//SOLVE IN LOCAL SPACE
 		//@Support points / Supporting edges
 		// We have the axes, but not the edges: each axis has 4 edges parallel
 		// to it, we need to find which of the 4 for each object. We do
@@ -770,13 +737,192 @@ bool NarrowPhase::OBBToOBB(RigidbodyComponent * rb1, RigidbodyComponent * rb2, f
 		// (its a mid-point) and we determine which of the extremes in each
 		// of the other axes is closest.
 
-		m_edge2Dir = Vector3::Transform(m_edge2Dir, AbsR.Invert());
-		//Rotate axis through inverse R.
-		//@Return contact point?
-		QueryOBBEdgeContact(rb1, rb2, m_edge1Dir, m_edge2Dir, m_axisOfMinimumPenetration, m_penetrationDepth);
+		//@Convention of axis pointing from A outwards 
+		//m_axisOfMinimumPenetration comes from rb1
+		Vector3 oneToTwo = Vector3(t[0],t[1],t[2]);
+		//We want the axis to point outwards from OBB2
+		m_axisOfMinimumPenetration = (m_axisOfMinimumPenetration.Dot(oneToTwo) >= 0) ? (m_axisOfMinimumPenetration) : (-m_axisOfMinimumPenetration);
+		Vector3 edgeCentres[4];
+		//We have data of edge directions normalizes, axis of penetration, edge indices.
+		//@Working from assumptions.
+		//@Find all edge centre points and compute the one farthest in m_axisOfMinimumPenetration's direction? (Biggest dot product?)
+
+		switch (m_edge1Index) {
+		
+		case 0:
+		{
+			//X Component is zero for all centres
+			//Top front
+			edgeCentres[0] = Vector3(0, a->m_halfExtents.y, a->m_halfExtents.z);
+			//Top back
+			edgeCentres[1] = Vector3(0, a->m_halfExtents.y, -a->m_halfExtents.z);
+			//Bottom front
+			edgeCentres[2] = Vector3(0, -a->m_halfExtents.y, a->m_halfExtents.z);
+			//Bottom back
+			edgeCentres[3] = Vector3(0, -a->m_halfExtents.y, -a->m_halfExtents.z);
+		}
+		break;
+		case 1:
+			//Y Component is zero for all centres
+			//Front right
+			edgeCentres[0] = Vector3(a->m_halfExtents.x, 0, a->m_halfExtents.z);
+			//Back right
+			edgeCentres[1] = Vector3(a->m_halfExtents.x, 0, -a->m_halfExtents.z);
+			//Front left
+			edgeCentres[2] = Vector3(-a->m_halfExtents.x, 0, a->m_halfExtents.z);
+			//Back left
+			edgeCentres[3] = Vector3(-a->m_halfExtents.x, 0, -a->m_halfExtents.z);
+		{
+		}
+		break;
+		case 2:
+		{
+			//@Z component is zero for all centres
+			//Right top
+			edgeCentres[0] = Vector3(a->m_halfExtents.x, a->m_halfExtents.y, 0);
+			//Right bottom
+			edgeCentres[1] = Vector3(a->m_halfExtents.x, -a->m_halfExtents.y, 0);
+			//Left top
+			edgeCentres[2] = Vector3(-a->m_halfExtents.x, a->m_halfExtents.y, 0);
+			//Left bottom
+			edgeCentres[3] = Vector3(-a->m_halfExtents.x, -a->m_halfExtents.y, 0);
+		}
+		break;
+		}
+
+		Vector3 finalEdgeCentre;
+		Vector3 e1p1;
+		Vector3 e1p2;
+		float maxDp = FLT_MIN;
+		for (int i = 0; i < 4; i++) {
+			//Find maximum dp.
+			float currentDp = edgeCentres[i].Dot(oneToTwo);
+			if (currentDp > maxDp) {
+				maxDp = currentDp;
+				finalEdgeCentre = edgeCentres[i];
+			}
+		}
+
+		switch (m_edge1Index) {
+		case 0:
+		{
+			e1p1 = Vector3(finalEdgeCentre.x + a->m_halfExtents.x, finalEdgeCentre.y, finalEdgeCentre.z);
+			e1p2 = Vector3(finalEdgeCentre.x - a->m_halfExtents.x, finalEdgeCentre.y, finalEdgeCentre.z);
+		}
+		break;
+		case 1:
+		{
+			e1p1 = Vector3(finalEdgeCentre.x, finalEdgeCentre.y + a->m_halfExtents.y, finalEdgeCentre.z);
+			e1p2 = Vector3(finalEdgeCentre.x, finalEdgeCentre.y - a->m_halfExtents.y, finalEdgeCentre.z);
+		}
+		break;
+		case 2:
+		{
+			e1p1 = Vector3(finalEdgeCentre.x, finalEdgeCentre.y, finalEdgeCentre.z + a->m_halfExtents.z);
+			e1p2 = Vector3(finalEdgeCentre.x, finalEdgeCentre.y, finalEdgeCentre.z - a->m_halfExtents.z);
+		}
+		break;
+		}
+
+		Vector3 edge2Centres[4];
+		//We have data of edge directions normalizes, axis of penetration, edge indices.
+		//@Working from assumptions.
+		//@Find all edge centre points and compute the one farthest in m_axisOfMinimumPenetration's direction? (Biggest dot product?)
+
+		switch (m_edge2Index) {
+
+		case 0:
+		{
+			//Top front
+			edge2Centres[0] = oneToTwo + AbsR.Forward()*b->m_halfExtents.z + AbsR.Up()*b->m_halfExtents.y;
+			//Top back
+			edge2Centres[1] = edge2Centres[0] + AbsR.Backward()*b->m_halfExtents.z*2;
+			//Bottom back
+			edge2Centres[2] = edge2Centres[1] + AbsR.Down()*b->m_halfExtents.y*2;
+			//Bottom front
+			edge2Centres[3] = edge2Centres[2] * AbsR.Forward()*b->m_halfExtents.z*2;
+		}
+		break;
+		case 1:
+		{
+			//Front right
+			edge2Centres[0] = oneToTwo + AbsR.Forward()*b->m_halfExtents.z + AbsR.Right()*b->m_halfExtents.x;
+			//Back right
+			edge2Centres[1] = edge2Centres[0] + AbsR.Backward()*b->m_halfExtents.z*2;
+			//Back left
+			edge2Centres[2] = edge2Centres[1] + AbsR.Left()*b->m_halfExtents.x*2;
+			//Front left
+			edge2Centres[3] = edge2Centres[2] + AbsR.Forward()*b->m_halfExtents.z*2;
+		}
+		break;
+		case 2:
+		{
+			//Right top
+			edge2Centres[0] = oneToTwo + AbsR.Right()*b->m_halfExtents.x + AbsR.Up()*b->m_halfExtents.y;
+			//Right bottom
+			edge2Centres[1] = edge2Centres[0] + AbsR.Down()*b->m_halfExtents.y * 2;
+			//Left bottom
+			edge2Centres[2] = edge2Centres[1] + AbsR.Left()*b->m_halfExtents.x * 2;
+			//Left top
+			edge2Centres[3] = edge2Centres[2] + AbsR.Up()*b->m_halfExtents.y*2;
+		}
+		break;
+		}
+
+		//Find edge centre in OBB2
+		Vector3 finalEdge2Centre;
+		Vector3 e2p1;
+		Vector3 e2p2;
+
+		float minDp = FLT_MAX;
+		for (int i = 0; i < 4; i++) {
+			//Find minimum dp.
+			float currentDp = edge2Centres[i].Dot(oneToTwo);
+			if (currentDp < minDp) {
+				minDp = currentDp;
+				finalEdge2Centre = edge2Centres[i];
+			}
+		}
+
+		switch (m_edge2Index) {
+		case 0:
+		{
+			e2p1 = finalEdge2Centre + AbsR.Right()*b->m_halfExtents.x;
+			e2p2 = finalEdge2Centre + AbsR.Left()*b->m_halfExtents.x;
+		}
+		break;
+		case 1:
+		{
+			e2p1 = finalEdge2Centre + AbsR.Up()*b->m_halfExtents.y;
+			e2p2 = finalEdge2Centre + AbsR.Down()*b->m_halfExtents.y;
+		}
+		break;
+		case 2:
+		{
+			e2p1 = finalEdge2Centre + AbsR.Forward()*b->m_halfExtents.z;
+			e2p2 = finalEdge2Centre + AbsR.Backward()*b->m_halfExtents.z;
+		}
+		break;
+		}
+
+		//Now we have all data we need to get ClosestPtBetween segments
+		Vector3 p1, p2;
+		float f1, f2;
+		ClosestPtSegmentSegment(e1p1, e1p2, e2p1, e2p2, p1, p2, f1, f2);
+		Vector3 avgPoint = p1 + (p2 - p1)*0.5f;
+
+		//@Bring the contact point into Global space
+		Matrix pointMatrix = Matrix::CreateTranslation(avgPoint);
+		pointMatrix *= ma.Invert();
+		avgPoint = pointMatrix.Translation();
+		avgPoint += t1.m_position;
+
+		manifold.m_points.push_back(avgPoint);
 	}
+	m_solver.m_collidingPairs.push_back(manifold);
 	return true;
 }
+
 DirectX::SimpleMath::Vector3 NarrowPhase::FindIntersectionWithPlaneFromDistances(DirectX::SimpleMath::Vector3 start, DirectX::SimpleMath::Vector3 end, float d1, float d2)
 {
 	//@Using linear interpolation
@@ -785,16 +931,6 @@ DirectX::SimpleMath::Vector3 NarrowPhase::FindIntersectionWithPlaneFromDistances
 	return Vector3::Lerp(start, end, absD / (absD + absD2));
 }
 //@Helpful queries
-Vector3 NarrowPhase::QueryOBBEdgeContact(RigidbodyComponent * rb1, RigidbodyComponent * rb2, Vector3 edge1Dir, Vector3 edge2Dir,
-	Vector3 axisOfMinimumPenetration, float penetrationDepth)
-{
-	//@Get contact point
-	OrientedBoundingBox * a = dynamic_cast<OrientedBoundingBox*>(rb1->m_shape);//a
-	OrientedBoundingBox * b = dynamic_cast<OrientedBoundingBox*>(rb2->m_shape);//b
-
-
-	return Vector3();
-}
 DirectX::SimpleMath::Vector3 NarrowPhase::ClosestPtPointPlane(DirectX::SimpleMath::Vector3 point, DirectX::SimpleMath::Plane plane)
 {
 	float t = plane.Normal().Dot(point) - plane.D();//@Assuming plane equation is normalized

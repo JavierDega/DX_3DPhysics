@@ -37,15 +37,11 @@ void ContactSolver::Solve(float dt)
 		float v1Ratio = v1Length / (v1Length + v2Length);
 		float v2Ratio = v2Length / (v1Length + v2Length);
 			
-		float maxOverlap = 0.f;
-		for (ContactPoint cp : manifold.m_points) {
-			if (cp.m_penetration > maxOverlap) maxOverlap = cp.m_penetration;
-		}
-		if (!rb1->m_isKinematic)t1->m_position += v1Ratio * maxOverlap * manifold.m_normal;
-		if (!rb2->m_isKinematic)t2->m_position -= v2Ratio * maxOverlap * manifold.m_normal;
+		if (!rb1->m_isKinematic)t1->m_position += v1Ratio * manifold.m_maxPenetration * manifold.m_normal;
+		if (!rb2->m_isKinematic)t2->m_position -= v2Ratio * manifold.m_maxPenetration * manifold.m_normal;
 #pragma endregion
 
-		///2:Dynamic resolution
+			///2:Dynamic resolution
 #pragma region Linear Resolution
 
 		//http://www.gamasutra.com/view/feature/131424/pool_hall_lessons_fast_accurate_.php?page=3
@@ -74,28 +70,30 @@ void ContactSolver::Solve(float dt)
 		// v1' = v1 - optimizedP * m2 * n
 		rb1->m_velocity = rb1->m_velocity - optimizedP * rb2->m_mass * manifold.m_normal;
 		rb2->m_velocity = rb2->m_velocity + optimizedP * rb1->m_mass * manifold.m_normal;
-		 
+
 #pragma endregion
 
-		//@Derive force applied from our impulse resolution
-		Vector3 velDelta = rb1->m_velocity - prevVel;
-		Vector3 velDelta2 = rb2->m_velocity - prevVel2;
-		//Calculate normal force from impulse
-		//f = m*a
-		//f = mdv/dt
-		Vector3 rb1Force = rb1->m_mass * velDelta / dt;
-		Vector3 rb2Force = rb2->m_mass * velDelta2 / dt;
+			//@Derive force applied from our impulse resolution
+			Vector3 velDelta = rb1->m_velocity - prevVel;
+			Vector3 velDelta2 = rb2->m_velocity - prevVel2;
+			//Calculate normal force from impulse
+			//f = m*a
+			//f = mdv/dt
+			Vector3 rb1Force = rb1->m_mass * velDelta / dt;
+			Vector3 rb2Force = rb2->m_mass * velDelta2 / dt;
 
+			for (int i = 0; i < manifold.m_points.size(); i++) {
 #pragma region Angular resolution
-		//@Now we calculate our angular resolution
-		// Flinear = F
-		//Ftorque = F x(p - x)
-		rb1->m_torque = (manifold.m_points[0].m_position - t1->m_position).Cross(rb1Force);//@NOTE: WE'RE ASSUMING SINGLE CONTACT POINTS HERE
-		rb2->m_torque = (manifold.m_points[0].m_position - t2->m_position).Cross(rb2Force);
+				//@Now we calculate our angular resolution
+				// Flinear = F
+				//Ftorque = F x(p - x)
+				rb1->m_torque = (manifold.m_points[i] - t1->m_position).Cross(rb1Force/manifold.m_points.size());//@MUTLIPLE CONTACT POINTS
+				rb2->m_torque = (manifold.m_points[i] - t2->m_position).Cross(rb2Force/manifold.m_points.size());
 
 #pragma endregion
+			}
 
-		//3: Friction::Because of our Impulse based resolution, we need to calculate the normal force 'After the fact'
+			//3: Friction::Because of our Impulse based resolution, we need to calculate the normal force 'After the fact'
 #pragma region Kinetic friction
 
 		//@Friction:
@@ -116,7 +114,6 @@ void ContactSolver::Solve(float dt)
 		//Put to rest?
 
 #pragma endregion
-		
 
 	}
 	m_collidingPairs.clear();
