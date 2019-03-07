@@ -28,6 +28,9 @@ public:
 	///Variables
 	ID3D11Device1* m_device;
 	ID3D11DeviceContext1 * m_deviceContext;
+	//@Physics culling drawing
+	std::unique_ptr<DirectX::GeometricPrimitive> m_AABBCullingPrimitive;//@Used to aid debug drawing (Grid bins, AABB BV, Sphere BV, Sphere contact points;
+	std::unique_ptr<DirectX::GeometricPrimitive> m_sphereCullingPrimitive;
 	//@Font drawing
 	std::unique_ptr<DirectX::SpriteBatch> m_spriteBatch;
 	std::unique_ptr<DirectX::SpriteFont> m_font;

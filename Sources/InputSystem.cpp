@@ -103,6 +103,12 @@ void InputSystem::Update(float dt)
 		ExitGame();
 	}
 	if (m_keyboardTracker.pressed.F1) {
+		ps->m_visualizeContacts.isEnabled = !ps->m_visualizeContacts.isEnabled;
+	}
+	if (m_keyboardTracker.pressed.F2) {
+		ps->m_uniformGrid.isEnabled = !ps->m_uniformGrid.isEnabled;
+	}
+	if (m_keyboardTracker.pressed.F3) {
 		ps->m_AABBCulling.isEnabled = !ps->m_AABBCulling.isEnabled;
 	}
 	if (m_keyboardTracker.pressed.M) {

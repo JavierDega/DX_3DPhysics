@@ -11,8 +11,7 @@
 class GameObject {
 public:
 	GameObject(std::string name = "Default name", DirectX::SimpleMath::Vector3 position = DirectX::SimpleMath::Vector3::Zero,
-		DirectX::SimpleMath::Quaternion rotation = DirectX::SimpleMath::Quaternion::Identity, 
-		DirectX::SimpleMath::Vector3 scale = DirectX::SimpleMath::Vector3::One );
+		DirectX::SimpleMath::Quaternion rotation = DirectX::SimpleMath::Quaternion::Identity );
 	~GameObject();
 
 	//Functions

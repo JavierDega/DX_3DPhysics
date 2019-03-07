@@ -20,7 +20,7 @@ public:
 	void Solve(float dt);
 
 	//Variables
-	std::vector<ContactManifold> m_collidingPairs;
+	std::vector<ContactManifold> m_contactManifolds;
 	float m_frictionCoefficient;//@Same for all objects?
 };
 #endif /*CONTACTSOLVER_H_*/

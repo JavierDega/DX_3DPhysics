@@ -30,7 +30,7 @@ ObjectSystem::~ObjectSystem() {
 void ObjectSystem::Initialize(ID3D11Device1* device, ID3D11DeviceContext1 * deviceContext)
 {
 	//@What do here? LoadSceneOne
-	LoadScene(1);
+	LoadScene(0);
 }
 void ObjectSystem::InitWindow(D3D11_VIEWPORT screenViewport)
 {
@@ -203,11 +203,6 @@ void ObjectSystem::LoadScene( unsigned int index)
 		case 1:
 		{
 
-			GameObject * obb3 = new GameObject("OBB3", Vector3(0, -10, -10.f));
-			RigidbodyComponent * rb3 = new RigidbodyComponent(Vector3(15.f, 0.5, 15.f), 10.f, true, DirectX::Colors::Green);
-			obb3->AddComponent(rb3);
-			AddObject(obb3);
-
 			GameObject * obb1 = new GameObject("OBB1", Vector3( -1, 0, -10.f));
 			RigidbodyComponent * rb1 = new RigidbodyComponent(Vector3(0.5, 0.5, 0.5));
 			rb1->m_force += Vector3( 500, 0, 0);
@@ -222,6 +217,10 @@ void ObjectSystem::LoadScene( unsigned int index)
 			obb2->AddComponent(rb2);
 			AddObject(obb2);
 
+			GameObject * obb3 = new GameObject("OBB3", Vector3(0, -10, -10.f));
+			RigidbodyComponent * rb3 = new RigidbodyComponent(Vector3(5.f, 0.5, 5.f), 10.f, true, DirectX::Colors::Green);
+			obb3->AddComponent(rb3);
+			AddObject(obb3);
 		}
 		break;
 	}

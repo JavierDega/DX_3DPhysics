@@ -1,14 +1,15 @@
 #ifndef PHYSICSYSTEM_H_
 #define PHYSICSYSTEM_H_
 #include "System.h"
+#include "BroadPhase.h"
 #include "NarrowPhase.h"
 #include "RigidbodyComponent.h"
 #include "OrientedBoundingBox.h"
 
-typedef struct SettingStr {
+struct Setting {
 	std::wstring log;
 	bool isEnabled;
-}Setting;
+};
 /*Iterates on all rigidbodies
 Computing timestep, then running:
 Integration update (Semi-euler - Verlet)
@@ -40,11 +41,11 @@ public:
 	//@Timestep
 	void UpdatePhysics(float dt);
 	//@BroadPhase
-	bool BroadPhase(RigidbodyComponent * rb1, RigidbodyComponent *rb2);
-	AABB ComputeAABB(RigidbodyComponent * rb);
+	bool ComputeBroadPhase(RigidbodyComponent * rb1, RigidbodyComponent *rb2);
 	//@NarrowPhase
 	bool ComputeNarrowPhase(RigidbodyComponent * rb1, RigidbodyComponent *rb2, float dt );
 
+	BroadPhase m_broadPhase;
 	NarrowPhase m_narrowPhase;
 	//@Timestep
 	float m_minDt;
@@ -55,8 +56,10 @@ public:
 	std::wstring m_fps;
 	//Space subdivision
 	//BroadPhase
+	Setting m_uniformGrid;
 	Setting m_AABBCulling;
 	Setting m_sphereCulling;
+	Setting m_visualizeContacts;
 	//Medium phase
 
 	//@Debug

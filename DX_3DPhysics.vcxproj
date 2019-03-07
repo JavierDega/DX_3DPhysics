@@ -159,6 +159,7 @@
     <ClInclude Include="DebugDraw.h" />
     <ClInclude Include="DeviceResources.h" />
     <ClInclude Include="Game.h" />
+    <ClInclude Include="Headers\BroadPhase.h" />
     <ClInclude Include="Headers\Capsule.h" />
     <ClInclude Include="Headers\Component.h" />
     <ClInclude Include="Headers\GameObject.h" />
@@ -188,6 +189,7 @@
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Create</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Create</PrecompiledHeader>
     </ClCompile>
+    <ClCompile Include="Sources\BroadPhase.cpp" />
     <ClCompile Include="Sources\Capsule.cpp" />
     <ClCompile Include="Sources\Component.cpp" />
     <ClCompile Include="Sources\GameObject.cpp" />

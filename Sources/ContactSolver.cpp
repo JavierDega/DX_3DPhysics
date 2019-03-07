@@ -18,7 +18,7 @@ ContactSolver::~ContactSolver()
 void ContactSolver::Solve(float dt)
 {
 	//Iterate through all m_collidingPairs, solve them
-	for (ContactManifold manifold : m_collidingPairs) {
+	for (ContactManifold manifold : m_contactManifolds) {
 		//Displace along the normal by maxPenetration amount
 		//@CONVENTION: Normal always points to first rigidbody pair.
 		//@Overlap is always positive
@@ -27,6 +27,8 @@ void ContactSolver::Solve(float dt)
 		RigidbodyComponent * rb2 = manifold.m_rigidbodies.second;
 		TransformComponent * t1 = &rb1->m_owner->m_transform;
 		TransformComponent * t2 = &rb2->m_owner->m_transform;
+
+		if ((t1->m_position - t2->m_position).Dot(manifold.m_normal) < 0) manifold.m_normal *= -1;
 		///1:Displacement
 #pragma region Displacement
 
@@ -87,8 +89,10 @@ void ContactSolver::Solve(float dt)
 				//@Now we calculate our angular resolution
 				// Flinear = F
 				//Ftorque = F x(p - x)
-				rb1->m_torque = (manifold.m_points[i] - t1->m_position).Cross(rb1Force/manifold.m_points.size());//@MUTLIPLE CONTACT POINTS
-				rb2->m_torque = (manifold.m_points[i] - t2->m_position).Cross(rb2Force/manifold.m_points.size());
+				Vector3 f1 = rb1Force / manifold.m_points.size();
+				Vector3 f2 = rb2Force / manifold.m_points.size();
+				rb1->m_torque = (manifold.m_points[i] - t1->m_position).Cross(f1);//@MUTLIPLE CONTACT POINTS
+				rb2->m_torque = (manifold.m_points[i] - t2->m_position).Cross(f2);
 
 #pragma endregion
 			}
@@ -116,5 +120,4 @@ void ContactSolver::Solve(float dt)
 #pragma endregion
 
 	}
-	m_collidingPairs.clear();
 }
