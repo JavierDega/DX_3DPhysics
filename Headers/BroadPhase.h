@@ -1,7 +1,11 @@
 #include "RigidbodyComponent.h"
 
 struct AABBNode {
-
+public:
+	AABBNode(DirectX::SimpleMath::Vector3 halfExtents, DirectX::SimpleMath::Vector3 centre)
+		: m_centre(centre) {
+		m_AABB.m_halfExtents = halfExtents;
+	}
 	AABB m_AABB;
 	DirectX::SimpleMath::Vector3 m_centre;
 	std::vector<AABBNode> m_children;

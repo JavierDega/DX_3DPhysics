@@ -106,9 +106,23 @@ void InputSystem::Update(float dt)
 		ps->m_visualizeContacts.isEnabled = !ps->m_visualizeContacts.isEnabled;
 	}
 	if (m_keyboardTracker.pressed.F2) {
-		ps->m_uniformGrid.isEnabled = !ps->m_uniformGrid.isEnabled;
+		if (!ps->m_uniformGrid.isEnabled) {
+			//@Enable uniform grid
+			ps->EnableUniformGrid();
+		}
+		else {
+			ps->DisableUniformGrid();
+		}
 	}
 	if (m_keyboardTracker.pressed.F3) {
+		if (!ps->m_hierarchicalGrid.isEnabled) {
+			ps->EnableHierarchicalGrid();
+		}
+		else {
+			ps->DisableHierarchicalGrid();
+		}
+	}
+	if (m_keyboardTracker.pressed.F4) {
 		ps->m_AABBCulling.isEnabled = !ps->m_AABBCulling.isEnabled;
 	}
 	if (m_keyboardTracker.pressed.M) {

@@ -23,8 +23,8 @@ void NarrowPhase::ApplyImpulse(DirectX::SimpleMath::Vector3 impulse, DirectX::Si
 bool NarrowPhase::SphereToSphere(RigidbodyComponent * rb1, RigidbodyComponent * rb2, float dt)
 {
 	//@At this point it can be a static_cast
-	Sphere * sphere1 = dynamic_cast<Sphere*>(rb1->m_shape);
-	Sphere * sphere2 = dynamic_cast<Sphere*>(rb2->m_shape);
+	Sphere * sphere1 = static_cast<Sphere*>(rb1->m_shape);
+	Sphere * sphere2 = static_cast<Sphere*>(rb2->m_shape);
 	TransformComponent * t1 = &rb1->m_owner->m_transform;
 	TransformComponent * t2 = &rb2->m_owner->m_transform;
 	//@Cases?
@@ -63,8 +63,8 @@ bool NarrowPhase::SphereToSphere(RigidbodyComponent * rb1, RigidbodyComponent * 
 
 bool NarrowPhase::SphereToOBB(RigidbodyComponent * rb1, RigidbodyComponent * rb2, float dt)
 {
-	Sphere * sphere1 = dynamic_cast<Sphere*>(rb1->m_shape);
-	OrientedBoundingBox * obb2 = dynamic_cast<OrientedBoundingBox*>(rb2->m_shape);
+	Sphere * sphere1 = static_cast<Sphere*>(rb1->m_shape);
+	OrientedBoundingBox * obb2 = static_cast<OrientedBoundingBox*>(rb2->m_shape);
 	TransformComponent * t1 = &rb1->m_owner->m_transform;
 	TransformComponent * t2 = &rb2->m_owner->m_transform;
 
@@ -184,8 +184,8 @@ bool NarrowPhase::OBBToOBB(RigidbodyComponent * rb1, RigidbodyComponent * rb2, f
 		return 1;
 	}
 	*/
-	OrientedBoundingBox * a = dynamic_cast<OrientedBoundingBox*>(rb1->m_shape);//a
-	OrientedBoundingBox * b = dynamic_cast<OrientedBoundingBox*>(rb2->m_shape);//b
+	OrientedBoundingBox * a = static_cast<OrientedBoundingBox*>(rb1->m_shape);//a
+	OrientedBoundingBox * b = static_cast<OrientedBoundingBox*>(rb2->m_shape);//b
 
 	TransformComponent t1 = rb1->m_owner->m_transform;
 	TransformComponent t2 = rb2->m_owner->m_transform;

@@ -9,7 +9,9 @@ using namespace SimpleMath;
 using namespace std;
 
 BroadPhase::BroadPhase()
+	: m_AABBTreeRoot(Vector3(15, 15, 15), Vector3::Zero)
 {
+	//@Initialize one off grid
 }
 
 BroadPhase::~BroadPhase()
@@ -48,13 +50,13 @@ AABB BroadPhase::ComputeAABB(RigidbodyComponent * rb)
 	switch (rb->m_shape->m_type) {
 	case ShapeType::SPHERE:
 	{
-		Sphere* sphere = dynamic_cast<Sphere*>(rb->m_shape);
+		Sphere* sphere = static_cast<Sphere*>(rb->m_shape);
 		sphere->m_AABB = AABB{ Vector3(sphere->m_radius, sphere->m_radius, sphere->m_radius) };
 	}
 	break;
 	case ShapeType::OBB:
 	{
-		OrientedBoundingBox * obb = dynamic_cast<OrientedBoundingBox*>(rb->m_shape);
+		OrientedBoundingBox * obb = static_cast<OrientedBoundingBox*>(rb->m_shape);
 #pragma region AABB from OBB
 		/* From Christer Ericson's Real-Time collision detection book (OPTIMIZED WITHOUT CALCULATING BC)
 		// Transform AABB a by the matrix m and translation t, // find maximum extents, and store result into AABB b.
@@ -103,7 +105,7 @@ vector<AABBNode*> BroadPhase::GetFinalNodes(AABBNode * rootNode)
 			vector<AABBNode*> childrenNodes = GetFinalNodes(&rootNode->m_children[i]);
 			if (!childrenNodes.empty()) {//@Redundant check
 				for (unsigned int j = 0; j < childrenNodes.size(); j++) {
-					finalNodes.push_back(childrenNodes[i]);
+					finalNodes.push_back(childrenNodes[j]);
 				}
 			}
 		}
@@ -113,21 +115,10 @@ vector<AABBNode*> BroadPhase::GetFinalNodes(AABBNode * rootNode)
 
 bool BroadPhase::TestAgainstAABBTree(RigidbodyComponent * rb, AABBNode * rootNode)
 {
-	bool returnVal = false;
-	//Check against every final, children leaf node.
-	if (rootNode->m_children.empty()) {
-		//Check rb against this one
-		AABB rbBox = ComputeAABB(rb);
-		if (AABBTest(rbBox, rootNode->m_AABB, rb->m_owner->m_transform.m_position, rootNode->m_centre)) {
-			rootNode->m_containing.push_back(rb);
-			returnVal = true;
-		}
+	AABB rbBox = ComputeAABB(rb);
+	if (AABBTest(rbBox, rootNode->m_AABB, rb->m_owner->m_transform.m_position, rootNode->m_centre)) {
+		rootNode->m_containing.push_back(rb);
+		return true;
 	}
-	else {
-		//@Check against children of it
-		for (unsigned int i = 0; i < rootNode->m_children.size(); i++) {
-			TestAgainstAABBTree(rb, &rootNode->m_children[i]);
-		}
-	}
-	return returnVal;
+	return false;
 }

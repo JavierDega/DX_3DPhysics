@@ -44,7 +44,11 @@ public:
 	bool ComputeBroadPhase(RigidbodyComponent * rb1, RigidbodyComponent *rb2);
 	//@NarrowPhase
 	bool ComputeNarrowPhase(RigidbodyComponent * rb1, RigidbodyComponent *rb2, float dt );
-
+	//@Setting functions
+	void EnableUniformGrid();
+	void DisableUniformGrid();//Might interact with hierarchical grid if enabled
+	void EnableHierarchicalGrid();//Might interact with Uniform grid if disabled
+	void DisableHierarchicalGrid();
 	BroadPhase m_broadPhase;
 	NarrowPhase m_narrowPhase;
 	//@Timestep
@@ -57,6 +61,7 @@ public:
 	//Space subdivision
 	//BroadPhase
 	Setting m_uniformGrid;
+	Setting m_hierarchicalGrid;
 	Setting m_AABBCulling;
 	Setting m_sphereCulling;
 	Setting m_visualizeContacts;

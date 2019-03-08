@@ -26,7 +26,7 @@ GraphicSystem * GraphicSystem::GetInstance()
 
 //Constructor
 GraphicSystem::GraphicSystem() 
-	: m_pitch(0), m_yaw(3.14), m_cam(Vector3::Zero), m_look(Vector3::Backward)
+	: m_pitch(0), m_yaw(3.14), m_cam(Vector3(0,0,5.f)), m_look(Vector3::Forward)
 {
 	m_device = NULL;
 	m_deviceContext = NULL;
@@ -54,14 +54,19 @@ void GraphicSystem::Initialize(ID3D11Device1* device, ID3D11DeviceContext1 * dev
 	//@Init shapes
 	for (unsigned int i = 0; i < rigidbodies.size(); i++) {
 		//Downcast to create the right shape
-		Sphere * theSphere = dynamic_cast<Sphere*>(rigidbodies[i]->m_shape);
-		OrientedBoundingBox * theOBB = dynamic_cast<OrientedBoundingBox*>(rigidbodies[i]->m_shape);
-
-		if (theSphere) {
-			theSphere->m_primitive = GeometricPrimitive::CreateSphere(deviceContext, theSphere->m_radius * 2.0f);
-		}
-		else if (theOBB) {
-			theOBB->m_primitive = GeometricPrimitive::CreateBox(deviceContext, theOBB->m_halfExtents*2.0f);
+		switch (rigidbodies[i]->m_shape->m_type) {
+			case ShapeType::SPHERE: 
+			{
+				Sphere * theSphere = static_cast<Sphere*>(rigidbodies[i]->m_shape);
+				theSphere->m_primitive = GeometricPrimitive::CreateSphere(deviceContext, theSphere->m_radius*2.0f);
+			}
+			break;
+			case ShapeType::OBB:
+			{
+				OrientedBoundingBox * theOBB = static_cast<OrientedBoundingBox*>(rigidbodies[i]->m_shape);
+				theOBB->m_primitive = GeometricPrimitive::CreateBox(deviceContext, theOBB->m_halfExtents*2.0f);
+			}
+			break;
 		}
 	}
 }
@@ -102,7 +107,7 @@ void GraphicSystem::Update(float dt) {
 		//@Debug draw (Wireframes) (Only take into account position and shape properties, nor rotation nor scale)
 		if (ps->m_AABBCulling.isEnabled) {
 			//Create local primitive
-			Matrix scale = Matrix::CreateScale(Vector3::One/(currentRb->m_shape->m_AABB.m_halfExtents*2));
+			Matrix scale = Matrix::CreateScale(currentRb->m_shape->m_AABB.m_halfExtents*2);
 			//If its enabled, the PhysicsSystem, should of have computed, and updated, the AABB
 			m_AABBCullingPrimitive->Draw( scale*translation, view, m_proj, currentRb->m_shape->m_AABBColor, nullptr, true);
 		}
@@ -115,8 +120,8 @@ void GraphicSystem::Update(float dt) {
 	for (unsigned int i = 0; i < AABBbins.size(); i++) {
 		
 		Matrix translation = Matrix::CreateTranslation(AABBbins[i]->m_centre);
-		Matrix scale = Matrix::CreateScale(Vector3::One / (AABBbins[i]->m_AABB.m_halfExtents*2));
-		m_AABBCullingPrimitive->Draw(scale*translation, view, m_proj, Colors::Red, nullptr, true);
+		Matrix scale = Matrix::CreateScale(AABBbins[i]->m_AABB.m_halfExtents*2);
+		m_AABBCullingPrimitive->Draw(scale*translation, view, m_proj, (AABBbins[i]->m_containing.empty()) ? Colors::Red : Colors::Yellow, nullptr, true);
 	}
 	//@Render contacts
 	if (ps->m_visualizeContacts.isEnabled) {
@@ -133,11 +138,13 @@ void GraphicSystem::Update(float dt) {
 	const wchar_t * fps = ps->m_fps.c_str();
 	const wchar_t * visualizeContacts = ps->m_visualizeContacts.log.c_str();
 	const wchar_t * uniformGrid = ps->m_uniformGrid.log.c_str();
+	const wchar_t * hierarchicalGrid = ps->m_hierarchicalGrid.log.c_str();
 	const wchar_t * AABBCulling = ps->m_AABBCulling.log.c_str();
 	m_font->DrawString(m_spriteBatch.get(), fps, Vector2(10, 10 + 0*15 ), Colors::Black);
 	m_font->DrawString(m_spriteBatch.get(), visualizeContacts, Vector2(10, 10 + 1 * 15), Colors::Black);
 	m_font->DrawString(m_spriteBatch.get(), uniformGrid, Vector2(10, 10 + 2 * 15), Colors::Black);
-	m_font->DrawString(m_spriteBatch.get(), AABBCulling, Vector2(10, 10 + 3 * 15), Colors::Black);
+	m_font->DrawString(m_spriteBatch.get(), hierarchicalGrid, Vector2(10, 10 + 3 * 15), Colors::Black);
+	m_font->DrawString(m_spriteBatch.get(), AABBCulling, Vector2(10, 10 + 4 * 15), Colors::Black);
 	m_spriteBatch->End();
 
 }

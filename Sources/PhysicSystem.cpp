@@ -29,7 +29,8 @@ PhysicSystem::PhysicSystem()
 	m_minDt = 1.0f / 60.0f;
 	m_accumulator = 0;
 	m_visualizeContacts.isEnabled = true;
-	m_uniformGrid.isEnabled = true;
+	m_uniformGrid.isEnabled = false;
+	m_hierarchicalGrid.isEnabled = false;
 	m_AABBCulling.isEnabled = true;
 	m_sphereCulling.isEnabled = false;
 	m_stepOnce = false;
@@ -51,9 +52,6 @@ void PhysicSystem::Initialize(ID3D11Device1 * device, ID3D11DeviceContext1 * dev
 		//ComputeSphere(rb);?
 	}
 
-	//@Initialize one-off grid
-	m_broadPhase.m_AABBTreeRoot.m_centre = Vector3::Zero;
-	m_broadPhase.m_AABBTreeRoot.m_AABB.m_halfExtents = Vector3(10, 10, 10);
 }
 ///Init window
 void PhysicSystem::InitWindow(D3D11_VIEWPORT screenViewport)
@@ -67,7 +65,8 @@ void PhysicSystem::Update(float dt)
 	m_fps = to_wstring(1 / dt);
 	m_visualizeContacts.log = m_visualizeContacts.isEnabled ? L"Press F1 hide contact points" : L"Press F1 to view contact points";
 	m_uniformGrid.log = m_uniformGrid.isEnabled ? L"Press F2 to disable uniform grid subdivision" : L"Press F2 to enable uniform grid subdivision";
-	m_AABBCulling.log = m_AABBCulling.isEnabled ? L"Press F3 to disable AABB culling" : L"Press F3 to enable AABB culling";
+	m_hierarchicalGrid.log = m_hierarchicalGrid.isEnabled ? L"Press F3 to disable octree subdivision" : L"Press F3 to enable octree subdivision";
+	m_AABBCulling.log = m_AABBCulling.isEnabled ? L"Press F4 to disable AABB culling" : L"Press F4 to enable AABB culling";
 
 	//@Debug step mode
 	if (m_stepMode) {
@@ -153,13 +152,17 @@ void PhysicSystem::UpdatePhysics(float dt) {
 		currentRb->m_torque = Vector3::Zero;
 	}
 
-	//@SSScheme
-	for (unsigned int i = 0; i < m_rigidbodies.size(); i++){
-		m_broadPhase.TestAgainstAABBTree(m_rigidbodies[i], &m_broadPhase.m_AABBTreeRoot);
-	}
-
 	//Get all 'Final' AABBTree nodes (Recursion)
 	vector<AABBNode*> m_finalTreeNodes = m_broadPhase.GetFinalNodes(&m_broadPhase.m_AABBTreeRoot);
+
+	//@SSScheme
+	for (unsigned int i = 0; i < m_finalTreeNodes.size(); i++) {
+		//Clear bin for next frame
+		m_finalTreeNodes[i]->m_containing.clear();
+		for (unsigned int j = 0; j < m_rigidbodies.size(); j++) {
+			m_broadPhase.TestAgainstAABBTree(m_rigidbodies[j], m_finalTreeNodes[i]);
+		}
+	}
 
 	//@Broadphase for each bin
 	for (unsigned int i = 0; i < m_finalTreeNodes.size(); i++) {
@@ -172,8 +175,6 @@ void PhysicSystem::UpdatePhysics(float dt) {
 				}
 			}
 		}
-		//Clear bin for next frame
-		m_finalTreeNodes[i]->m_containing.clear();
 	}
 
 	//@Start nulling out collider pairs
@@ -258,6 +259,45 @@ bool PhysicSystem::ComputeNarrowPhase(RigidbodyComponent * rb1, RigidbodyCompone
 		break;
 	}
 	return false;
+}
+
+void PhysicSystem::EnableUniformGrid()
+{
+	m_uniformGrid.isEnabled = true;
+	//@Add eight children to the rootNode
+	m_broadPhase.m_AABBTreeRoot.m_children.clear();//Just in case
+	Vector3 centre = m_broadPhase.m_AABBTreeRoot.m_centre;
+	Vector3 halfExtents = m_broadPhase.m_AABBTreeRoot.m_AABB.m_halfExtents;
+	m_broadPhase.m_AABBTreeRoot.m_children.push_back(AABBNode(halfExtents / 2, centre + Vector3(halfExtents.x / 2, halfExtents.y / 2, halfExtents.z / 2)));//Right, top, front
+	m_broadPhase.m_AABBTreeRoot.m_children.push_back(AABBNode(halfExtents / 2, centre + Vector3(-halfExtents.x / 2, halfExtents.y / 2, halfExtents.z / 2)));//Left, top, front
+	m_broadPhase.m_AABBTreeRoot.m_children.push_back(AABBNode(halfExtents / 2, centre + Vector3(-halfExtents.x / 2, -halfExtents.y / 2, halfExtents.z / 2)));//Left, bottom, front
+	m_broadPhase.m_AABBTreeRoot.m_children.push_back(AABBNode(halfExtents / 2, centre + Vector3(halfExtents.x / 2, -halfExtents.y / 2, halfExtents.z / 2)));//Right, bottom, front
+
+	m_broadPhase.m_AABBTreeRoot.m_children.push_back(AABBNode(halfExtents / 2, centre + Vector3(halfExtents.x / 2, halfExtents.y / 2, -halfExtents.z / 2)));//Right, top, back
+	m_broadPhase.m_AABBTreeRoot.m_children.push_back(AABBNode(halfExtents / 2, centre + Vector3(-halfExtents.x / 2, halfExtents.y / 2, -halfExtents.z / 2)));//Left, top, back
+	m_broadPhase.m_AABBTreeRoot.m_children.push_back(AABBNode(halfExtents / 2, centre + Vector3(-halfExtents.x / 2, -halfExtents.y / 2, -halfExtents.z / 2)));//Left, bottom, back
+	m_broadPhase.m_AABBTreeRoot.m_children.push_back(AABBNode(halfExtents / 2, centre + Vector3(halfExtents.x / 2, -halfExtents.y / 2, -halfExtents.z / 2)));//Right, bottom, back
+}
+
+void PhysicSystem::DisableUniformGrid()
+{
+	if (m_hierarchicalGrid.isEnabled) {
+		DisableHierarchicalGrid();
+	}
+	//Then disable itself
+	//@Right now, the tree should consist of a root node, and eigh child nodes only.
+	//Simply delete the rootNode's children?
+	m_broadPhase.m_AABBTreeRoot.m_children.clear();
+	m_uniformGrid.isEnabled = false;
+}
+
+void PhysicSystem::EnableHierarchicalGrid()
+{
+
+}
+
+void PhysicSystem::DisableHierarchicalGrid()
+{
 }
 
 
