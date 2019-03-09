@@ -33,6 +33,7 @@ public:
 
 	//Variables
 	std::vector<GameObject * > m_objectList;
+	int m_sceneIndex;
 };
 
 #endif /*OBJECTSYSTEM_H_*/

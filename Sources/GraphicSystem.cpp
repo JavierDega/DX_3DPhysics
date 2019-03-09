@@ -51,22 +51,26 @@ void GraphicSystem::Initialize(ID3D11Device1* device, ID3D11DeviceContext1 * dev
 	m_AABBCullingPrimitive = GeometricPrimitive::CreateBox(deviceContext, Vector3::One);
 	m_sphereCullingPrimitive = GeometricPrimitive::CreateSphere(deviceContext, 0.1f);//@Taking into account we dont do sphere culling, this primitive is designed for visualizing contact points
 
+}
+void GraphicSystem::OnSceneLoad() {
+	ObjectSystem * os = ObjectSystem::GetInstance();
+	vector<RigidbodyComponent*> rigidbodies = os->GetRigidbodyComponentList();
 	//@Init shapes
 	for (unsigned int i = 0; i < rigidbodies.size(); i++) {
 		//Downcast to create the right shape
 		switch (rigidbodies[i]->m_shape->m_type) {
-			case ShapeType::SPHERE: 
-			{
-				Sphere * theSphere = static_cast<Sphere*>(rigidbodies[i]->m_shape);
-				theSphere->m_primitive = GeometricPrimitive::CreateSphere(deviceContext, theSphere->m_radius*2.0f);
-			}
-			break;
-			case ShapeType::OBB:
-			{
-				OrientedBoundingBox * theOBB = static_cast<OrientedBoundingBox*>(rigidbodies[i]->m_shape);
-				theOBB->m_primitive = GeometricPrimitive::CreateBox(deviceContext, theOBB->m_halfExtents*2.0f);
-			}
-			break;
+		case ShapeType::SPHERE:
+		{
+			Sphere * theSphere = static_cast<Sphere*>(rigidbodies[i]->m_shape);
+			theSphere->m_primitive = GeometricPrimitive::CreateSphere(m_deviceContext, theSphere->m_radius*2.0f);
+		}
+		break;
+		case ShapeType::OBB:
+		{
+			OrientedBoundingBox * theOBB = static_cast<OrientedBoundingBox*>(rigidbodies[i]->m_shape);
+			theOBB->m_primitive = GeometricPrimitive::CreateBox(m_deviceContext, theOBB->m_halfExtents*2.0f);
+		}
+		break;
 		}
 	}
 }
@@ -115,7 +119,7 @@ void GraphicSystem::Update(float dt) {
 			//@Similar process
 		}
 	}
-	//@Render uniform grid bins
+	//@Render grid bins
 	vector<AABBNode*> AABBbins = ps->m_broadPhase.GetFinalNodes(&ps->m_broadPhase.m_AABBTreeRoot);
 	for (unsigned int i = 0; i < AABBbins.size(); i++) {
 		

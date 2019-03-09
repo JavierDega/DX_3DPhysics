@@ -28,7 +28,15 @@ void ContactSolver::Solve(float dt)
 		TransformComponent * t1 = &rb1->m_owner->m_transform;
 		TransformComponent * t2 = &rb2->m_owner->m_transform;
 
-		if ((t1->m_position - t2->m_position).Dot(manifold.m_normal) < 0) manifold.m_normal *= -1;
+		Vector3 oneToTwo = t2->m_position - t1->m_position;
+		//@If both their velocities are separating they're likely duplicates and have already been processed
+		if (rb1->m_velocity.Dot(oneToTwo) < 0) {
+			if (rb2->m_velocity.Dot(oneToTwo) > 0)
+			{
+				continue;//@We don't process them (Manifold set is cleared every frame)
+			}
+		}
+		if (oneToTwo.Dot(manifold.m_normal) >= 0) manifold.m_normal *= -1;//@Normal should point to t1
 		///1:Displacement
 #pragma region Displacement
 

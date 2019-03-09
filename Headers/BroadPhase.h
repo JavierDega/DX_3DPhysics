@@ -22,10 +22,12 @@ public:
 	AABB ComputeAABB(RigidbodyComponent * rb);
 	//@Recursive call
 	std::vector<AABBNode*> GetFinalNodes(AABBNode * rootNode);
-	std::vector<AABBNode*> GetNonFinalNodes(AABBNode * rootNode);
+	std::vector<AABBNode*> GetNonFinalNodes(AABBNode * rootNode);//@@DEPRECATED
+	std::vector < AABBNode * > GetSemiFinalNodes(AABBNode * rootNode);
 	//@Recursive call
 	bool TestAgainstAABBTree(RigidbodyComponent * rb, AABBNode * rootNode);
 	void ExpandNode(AABBNode * rootNode);
+	void UpdateDynamicTree();//@Hierarchical Grid
 	//Variables
 	AABBNode m_AABBTreeRoot;
 

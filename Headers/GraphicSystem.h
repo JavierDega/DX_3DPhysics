@@ -20,6 +20,7 @@ public:
 	///Functions
 	//Events
 	void Initialize(ID3D11Device1* device, ID3D11DeviceContext1 * deviceContext);
+	void OnSceneLoad();
 	void InitWindow(D3D11_VIEWPORT screenViewport);
 	virtual void Update(float dt = 0);
 	virtual void Reset();

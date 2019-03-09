@@ -175,14 +175,14 @@ void Game::CreateDeviceDependentResources()
     // TODO: Initialize device dependent objects here (independent of window size).
     device;
 	//Systems initialize
+	//Graphics
+	GraphicSystem::GetInstance()->Initialize(device, deviceContext);//Needs to come first to get hand of device references
 	//ObjectFactory
 	ObjectSystem::GetInstance()->Initialize();
 	//Input
 	InputSystem::GetInstance()->Initialize();
 	//Physics
-	PhysicSystem::GetInstance()->Initialize(device, deviceContext);
-	//Graphics
-	GraphicSystem::GetInstance()->Initialize(device, deviceContext);
+	PhysicSystem::GetInstance()->Initialize();
 }
 
 // Allocate all memory resources that change on a window SizeChanged event.

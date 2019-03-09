@@ -132,6 +132,10 @@ void InputSystem::Update(float dt)
 		if (ps->m_stepMode)
 			ps->m_stepOnce = true;
 	}
+	if (m_keyboardTracker.pressed.R) {
+		//Reload scene
+		ObjectSystem::GetInstance()->LoadScene(ObjectSystem::GetInstance()->m_sceneIndex);
+	}
 	//@Already normalized
 	Vector3 relativeForward = *m_look - *m_cam;
 	Vector3 relativeRight = relativeForward.Cross(Vector3::Up);

@@ -26,7 +26,7 @@ PhysicSystem::PhysicSystem()
 	m_gravity = Vector3 ( 0, -9.8f, 0 );//@Relative to mass
 	//Viscosity for earth's air @  0'Celsius = 1.33*10^-5 kg/ms^2
 	m_airViscosity = 0.133f;
-	m_minDt = 1.0f / 120.0f;
+	m_minDt = 1.0f / 60.0f;
 	m_accumulator = 0;
 	m_visualizeContacts.isEnabled = true;
 	m_uniformGrid.isEnabled = false;
@@ -104,139 +104,85 @@ void PhysicSystem::Reset()
 //Physics loop
 void PhysicSystem::UpdatePhysics(float dt) {
 
-	vector<RigidbodyComponent*> m_rigidbodies = ObjectSystem::GetInstance()->GetRigidbodyComponentList();
-	vector<pair<RigidbodyComponent*, RigidbodyComponent*>> m_pairs;
+	vector<RigidbodyComponent*> rigidbodies = ObjectSystem::GetInstance()->GetRigidbodyComponentList();
+	vector<pair<RigidbodyComponent*, RigidbodyComponent*>> pairs;
 
 	//@Clear all previous frame's contact points
 	m_narrowPhase.m_solver.m_contactManifolds.clear();
 
-	//First: @Clear debug colors
-	for (RigidbodyComponent* rb : m_rigidbodies) {
+	//@Clear debug colors
+	for (RigidbodyComponent* rb : rigidbodies) {
 		rb->m_shape->m_AABBColor = Colors::Red;
-		//rb->m_shape->m_sphereColor = Colors::Red;
 	}
 
-	//@SSScheme
-	if (m_hierarchicalGrid.isEnabled) {
+	//@Octree Update
+	if (m_hierarchicalGrid.isEnabled)m_broadPhase.UpdateDynamicTree();//@Can change final and non final nodes
 
-		//@Check for shrinking (We loop upwards from the bottom, getting all nonfinal nodes).
-		//We delete children from those nonfinal nodes whose children's m_containing sum is less than 8.
-		//When deleting children, we add their contained rigidbodies to the parent.
-		//Recursion.
-		vector<AABBNode*> m_orderedNonFinalNodes = m_broadPhase.GetNonFinalNodes(&m_broadPhase.m_AABBTreeRoot);
-		for (unsigned int i = 0; i < m_orderedNonFinalNodes.size(); i++) {
-			//@They are ordered upwards
-			AABBNode * curNode = m_orderedNonFinalNodes[i];
-			//@Count total contained rigidbodies
-			unsigned int rigidbodyCount = 0;
-			for (unsigned int j = 0; j < curNode->m_children.size(); j++) {
-				AABBNode * curChild = &curNode->m_children[j];
-				rigidbodyCount += curChild->m_containing.size();
-			}
-			//@Total amount of rigidbodies in all children nodes is lower than 8
-			if (rigidbodyCount < 8) {
-				//Destroy children nodes, obtains all their contained rigidbodies (It is now a final node)
-				for (unsigned int j = 0; j < curNode->m_children.size(); j++) {
-					AABBNode * curChild = &curNode->m_children[j];
-					for (unsigned int k = 0; k < curChild->m_containing.size(); k++) {
-						curNode->m_containing.push_back(curChild->m_containing[k]);
-					}
-				}
-				curNode->m_children.clear();
+	//@Clear finalNodes
+	vector <AABBNode*> finalNodes = m_broadPhase.GetFinalNodes(&m_broadPhase.m_AABBTreeRoot);
+	for (AABBNode* finalNode : finalNodes) {
+		if (finalNode->m_containing.size() > 0)finalNode->m_containing.clear();
+	}
+	//@Test against every final node
+	for (RigidbodyComponent * rb : rigidbodies) {
+		for (AABBNode* finalNode : finalNodes) {
+			m_broadPhase.TestAgainstAABBTree(rb, finalNode);
+		}
+	}
+
+	//@Broadphase
+	for (AABBNode* finalNode : finalNodes) {
+		for (int i = 0; i < finalNode->m_containing.size(); i++) {
+			RigidbodyComponent * first = finalNode->m_containing[i];
+			//Check upwards
+			for (int j = i + 1; j < finalNode->m_containing.size(); j++) {
+				RigidbodyComponent * second = finalNode->m_containing[j];
+				if (ComputeBroadPhase(first, second))pairs.push_back(make_pair(first, second));
 			}
 		}
 	}
 
-	//Get all 'Final' AABBTree nodes (Recursion)
-	vector<AABBNode*> m_finalTreeNodes = m_broadPhase.GetFinalNodes(&m_broadPhase.m_AABBTreeRoot);
-
-	if (m_hierarchicalGrid.isEnabled){
-		//@Check for expanding(We loop through all final nodes. If they have 8 or more rigidbodies, they expand.
-		for (int i = 0; i < m_finalTreeNodes.size(); i++) {
-			if (m_finalTreeNodes[i]->m_containing.size() >= 8) {
-				//We Expand this node (Generate 8 children)
-				//All children get added to the end of this list
-				//This one gets sacked from the list.
-				//We i--; not to skip a loop iteration
-				m_broadPhase.ExpandNode(m_finalTreeNodes[i]);
-				for (unsigned int j = 0; j < m_finalTreeNodes[i]->m_children.size(); j++) {
-					m_finalTreeNodes.push_back(&m_finalTreeNodes[i]->m_children[j]);
-				}
-				//m_finalTreeNodes[i]->m_containing.clear(); This lets us know this nonfinal node has just been expanded
-				//@Its not a final node anymore
-				m_finalTreeNodes[i]->m_containing.clear();
-				m_finalTreeNodes.erase(m_finalTreeNodes.begin() + i);
-				i--;
-			}
-		}
-	}
-
-	//Check rigidbodies against every final bin.
-	for (unsigned int i = 0; i < m_finalTreeNodes.size(); i++) {
-		//Clear bin for next frame
-		m_finalTreeNodes[i]->m_containing.clear();
-		for (unsigned int j = 0; j < m_rigidbodies.size(); j++) {
-			m_broadPhase.TestAgainstAABBTree(m_rigidbodies[j], m_finalTreeNodes[i]);
-		}
-	}
-
-	//@Broadphase for each bin
-	for (unsigned int i = 0; i < m_finalTreeNodes.size(); i++) {
-		//Each node is a separate space, where we do a N^2 collision test.
-		for (unsigned int j = 0; j < m_finalTreeNodes[i]->m_containing.size(); j++) {
-			//Each rb checks upwards, so we avoid redundant collision checks
-			for (unsigned int k = j + 1; k < m_finalTreeNodes[i]->m_containing.size(); k++) {
-				if (ComputeBroadPhase(m_finalTreeNodes[i]->m_containing[j], m_finalTreeNodes[i]->m_containing[k])) {
-					m_pairs.push_back(make_pair(m_finalTreeNodes[i]->m_containing[j], m_finalTreeNodes[i]->m_containing[k]));
-				}
-			}
-		}
-	}
-
-	//@Start nulling out collider pairs
-	//@Medium Phase
 	//@Narrow Phase
-	for (unsigned int i = 0; i < m_pairs.size(); i++) {
-		ComputeNarrowPhase(m_pairs[i].first, m_pairs[i].second, dt);
+	for (pair<RigidbodyComponent*, RigidbodyComponent*> pair : pairs) {
+		ComputeNarrowPhase(pair.first, pair.second, dt);
 	}
 
 	///@Surviving pairs, with contact points, penetration and normal information have been logged to solver and MUST be colliding
 	m_narrowPhase.m_solver.Solve(dt);
 
 	//@Last loop: Integration
-	for (unsigned int i = 0; i < m_rigidbodies.size(); i++) {
-		RigidbodyComponent* currentRb = m_rigidbodies[i];
+	for (RigidbodyComponent * rb : rigidbodies) {
 		//@Integration
-		if (currentRb->m_isKinematic) {
-			currentRb->m_acceleration = Vector3::Zero;
-			currentRb->m_velocity = Vector3::Zero;
-			currentRb->m_angularVelocity = Vector3::Zero;
-			currentRb->m_angularAcceleration = Vector3::Zero;
+		if (rb->m_isKinematic) {
+			rb->m_acceleration = Vector3::Zero;
+			rb->m_velocity = Vector3::Zero;
+			rb->m_angularVelocity = Vector3::Zero;
+			rb->m_angularAcceleration = Vector3::Zero;
 		}
 		else
 		{
 			//Calculate generalized forces
-			currentRb->m_force -= m_airViscosity * currentRb->m_velocity;//@Viscosity
-			currentRb->m_force += m_gravity * currentRb->m_mass;//@force relative to mass
+			rb->m_force -= m_airViscosity * rb->m_velocity;//@Viscosity
+			rb->m_force += m_gravity * rb->m_mass;//@force relative to mass
 			//@Angular drag?
-			currentRb->m_torque -= m_airViscosity * currentRb->m_angularVelocity;
+			rb->m_torque -= m_airViscosity * rb->m_angularVelocity;
 
 			//Apply forces
-			currentRb->m_acceleration = currentRb->m_force / currentRb->m_mass;
-			currentRb->m_velocity += currentRb->m_acceleration*dt;
-			currentRb->m_owner->m_transform.m_position += currentRb->m_velocity*dt;
+			rb->m_acceleration = rb->m_force / rb->m_mass;
+			rb->m_velocity += rb->m_acceleration*dt;
+			rb->m_owner->m_transform.m_position += rb->m_velocity*dt;
 
 			//Angular
-			currentRb->m_angularAcceleration = currentRb->m_torque / currentRb->m_mass;//For now, we use the mass scalar as our moment of inertia, our inertia tensor
-			currentRb->m_angularVelocity += currentRb->m_angularAcceleration*dt;
-			float radiansPerSecond = currentRb->m_angularVelocity.Length();
+			rb->m_angularAcceleration = rb->m_torque / rb->m_mass;//For now, we use the mass scalar as our moment of inertia, our inertia tensor
+			rb->m_angularVelocity += rb->m_angularAcceleration*dt;
+			float radiansPerSecond = rb->m_angularVelocity.Length();
 			if (radiansPerSecond > FLT_EPSILON) {
-				currentRb->m_owner->m_transform.m_rotation *= Quaternion::CreateFromAxisAngle(currentRb->m_angularVelocity / radiansPerSecond, radiansPerSecond*dt);
+				rb->m_owner->m_transform.m_rotation *= Quaternion::CreateFromAxisAngle(rb->m_angularVelocity / radiansPerSecond, radiansPerSecond*dt);
 			}
 		}
 		//Forces are computed every frame
-		currentRb->m_force = Vector3::Zero;
-		currentRb->m_torque = Vector3::Zero;
+		rb->m_force = Vector3::Zero;
+		rb->m_torque = Vector3::Zero;
 	}
 }
 //@BROADPHASE

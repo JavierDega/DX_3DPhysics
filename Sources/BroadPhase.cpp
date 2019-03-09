@@ -135,18 +135,35 @@ std::vector<AABBNode*> BroadPhase::GetNonFinalNodes(AABBNode * rootNode)
 	return orderedNonFinalNodes;
 }
 
-/*GetNonFinalNodes(){
-	vector NonfinalNodes;
-	if (rootNode->m_children.empty()){
-		//Is a final node
+std::vector<AABBNode*> BroadPhase::GetSemiFinalNodes(AABBNode * rootNode)
+{
+	vector<AABBNode*> semiFinalNodes;
+	if (rootNode->m_children.empty()) {
+		//This node is final.
+		//Don't add it to the vector
 	}
 	else {
-		//It has children. they might be final or not
-		for(children)
-			NonFinalNodes.push(GetNonFinalNodes(children[i]))
-		NonFinalNodes.push_back(rootNode);
+		//Node is non final.
+		//It can be semi-final or non final.(Children are final nodes or not)
+		bool isSemiFinalNode = true;
+		for (int i = 0; i < rootNode->m_children.size(); i++) {
+			AABBNode * childNode = &rootNode->m_children[i];
+			if (!childNode->m_children.empty()) {
+				//Node is not semifinal, look for one in its children
+				isSemiFinalNode = false;
+				vector < AABBNode * > childSemiFinalNodes = GetSemiFinalNodes(childNode);
+				for (AABBNode* childSemiFinalNode : childSemiFinalNodes) {
+					semiFinalNodes.push_back(childSemiFinalNode);
+				}
+			}
+		}
+		if (isSemiFinalNode) {
+			//if it is, push itself
+			semiFinalNodes.push_back(rootNode);
+		}
 	}
-}*/
+	return semiFinalNodes;
+}
 bool BroadPhase::TestAgainstAABBTree(RigidbodyComponent * rb, AABBNode * rootNode)
 {
 	AABB rbBox = ComputeAABB(rb);
@@ -170,4 +187,65 @@ void BroadPhase::ExpandNode(AABBNode * rootNode)
 	rootNode->m_children.push_back(AABBNode(halfExtents / 2, centre + Vector3(-halfExtents.x / 2, halfExtents.y / 2, -halfExtents.z / 2)));//Left, top, back
 	rootNode->m_children.push_back(AABBNode(halfExtents / 2, centre + Vector3(-halfExtents.x / 2, -halfExtents.y / 2, -halfExtents.z / 2)));//Left, bottom, back
 	rootNode->m_children.push_back(AABBNode(halfExtents / 2, centre + Vector3(halfExtents.x / 2, -halfExtents.y / 2, -halfExtents.z / 2)));//Right, bottom, back
+}
+
+void BroadPhase::UpdateDynamicTree()
+{
+
+	//@Check for shrinking (We loop upwards from the bottom, getting all nonfinal nodes).
+	//We delete children from those nonfinal nodes whose children's m_containing sum is less than 8.
+	//When deleting children, we add their contained rigidbodies to the parent.
+	//Recursion.
+	vector<AABBNode*> semiFinalNodes = GetSemiFinalNodes(&m_AABBTreeRoot);
+	for (AABBNode * semiFinalNode : semiFinalNodes) {
+		//@They are ordered upwards
+		//@Count total contained rigidbodies in children
+		vector<RigidbodyComponent *> alreadyProcessed;
+		for (AABBNode curChild : semiFinalNode->m_children) {
+			//Analyze every contained rigidbody in every childnode
+			for (RigidbodyComponent * containedRb : curChild.m_containing) {
+				bool isAlreadyProcessed = false;
+				for (RigidbodyComponent * processedRb : alreadyProcessed) {
+					if (containedRb == processedRb) {
+						isAlreadyProcessed = true;
+					}
+				}
+				if (!isAlreadyProcessed) {
+					alreadyProcessed.push_back(containedRb);
+				}
+			}
+		}
+		//@Total amount of rigidbodies in all children nodes is lower than 8
+		if (alreadyProcessed.size() < 20) {
+			//Destroy children nodes, obtains all their contained rigidbodies (It is now a final node)
+			for (RigidbodyComponent * rb : alreadyProcessed) {
+				semiFinalNode->m_containing.push_back(rb);
+			}
+		semiFinalNode->m_children.clear();
+		}
+	}
+
+	//Get all 'Final' AABBTree nodes (Recursion)
+	vector<AABBNode*> finalNodes = GetFinalNodes(&m_AABBTreeRoot);
+
+	//@Check for expanding(We loop through all final nodes. If they have 8 or more rigidbodies, they expand.
+	for (int i = 0; i < finalNodes.size(); i++ ) {
+		AABBNode * finalNode = finalNodes[i];
+		if (finalNode->m_containing.size() >= 20) {
+			//We Expand this node (Generate 8 children)
+			//All children get added to the end of this list
+			//This one gets sacked from the list.
+			//We i--; not to skip a loop iteration
+			ExpandNode(finalNode);
+			//@Updates vector
+			for (int j = 0; j < finalNode->m_children.size(); j++) {
+				AABBNode * curNode = &finalNode->m_children[j];
+				finalNodes.push_back(curNode);
+			}
+			//@Its not a final node anymore
+			finalNode->m_containing.clear();
+			finalNodes.erase(finalNodes.begin() + i);
+			i--;
+		}
+	}
 }
