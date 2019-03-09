@@ -26,7 +26,7 @@ PhysicSystem::PhysicSystem()
 	m_gravity = Vector3 ( 0, -9.8f, 0 );//@Relative to mass
 	//Viscosity for earth's air @  0'Celsius = 1.33*10^-5 kg/ms^2
 	m_airViscosity = 0.133f;
-	m_minDt = 1.0f / 60.0f;
+	m_minDt = 1.0f / 120.0f;
 	m_accumulator = 0;
 	m_visualizeContacts.isEnabled = true;
 	m_uniformGrid.isEnabled = false;
@@ -110,13 +110,100 @@ void PhysicSystem::UpdatePhysics(float dt) {
 	//@Clear all previous frame's contact points
 	m_narrowPhase.m_solver.m_contactManifolds.clear();
 
-	//@Clear debug colors
+	//First: @Clear debug colors
 	for (RigidbodyComponent* rb : m_rigidbodies) {
 		rb->m_shape->m_AABBColor = Colors::Red;
-		rb->m_shape->m_sphereColor = Colors::Red;
+		//rb->m_shape->m_sphereColor = Colors::Red;
 	}
 
-	//@First loop: Integration
+	//@SSScheme
+	if (m_hierarchicalGrid.isEnabled) {
+
+		//@Check for shrinking (We loop upwards from the bottom, getting all nonfinal nodes).
+		//We delete children from those nonfinal nodes whose children's m_containing sum is less than 8.
+		//When deleting children, we add their contained rigidbodies to the parent.
+		//Recursion.
+		vector<AABBNode*> m_orderedNonFinalNodes = m_broadPhase.GetNonFinalNodes(&m_broadPhase.m_AABBTreeRoot);
+		for (unsigned int i = 0; i < m_orderedNonFinalNodes.size(); i++) {
+			//@They are ordered upwards
+			AABBNode * curNode = m_orderedNonFinalNodes[i];
+			//@Count total contained rigidbodies
+			unsigned int rigidbodyCount = 0;
+			for (unsigned int j = 0; j < curNode->m_children.size(); j++) {
+				AABBNode * curChild = &curNode->m_children[j];
+				rigidbodyCount += curChild->m_containing.size();
+			}
+			//@Total amount of rigidbodies in all children nodes is lower than 8
+			if (rigidbodyCount < 8) {
+				//Destroy children nodes, obtains all their contained rigidbodies (It is now a final node)
+				for (unsigned int j = 0; j < curNode->m_children.size(); j++) {
+					AABBNode * curChild = &curNode->m_children[j];
+					for (unsigned int k = 0; k < curChild->m_containing.size(); k++) {
+						curNode->m_containing.push_back(curChild->m_containing[k]);
+					}
+				}
+				curNode->m_children.clear();
+			}
+		}
+	}
+
+	//Get all 'Final' AABBTree nodes (Recursion)
+	vector<AABBNode*> m_finalTreeNodes = m_broadPhase.GetFinalNodes(&m_broadPhase.m_AABBTreeRoot);
+
+	if (m_hierarchicalGrid.isEnabled){
+		//@Check for expanding(We loop through all final nodes. If they have 8 or more rigidbodies, they expand.
+		for (int i = 0; i < m_finalTreeNodes.size(); i++) {
+			if (m_finalTreeNodes[i]->m_containing.size() >= 8) {
+				//We Expand this node (Generate 8 children)
+				//All children get added to the end of this list
+				//This one gets sacked from the list.
+				//We i--; not to skip a loop iteration
+				m_broadPhase.ExpandNode(m_finalTreeNodes[i]);
+				for (unsigned int j = 0; j < m_finalTreeNodes[i]->m_children.size(); j++) {
+					m_finalTreeNodes.push_back(&m_finalTreeNodes[i]->m_children[j]);
+				}
+				//m_finalTreeNodes[i]->m_containing.clear(); This lets us know this nonfinal node has just been expanded
+				//@Its not a final node anymore
+				m_finalTreeNodes[i]->m_containing.clear();
+				m_finalTreeNodes.erase(m_finalTreeNodes.begin() + i);
+				i--;
+			}
+		}
+	}
+
+	//Check rigidbodies against every final bin.
+	for (unsigned int i = 0; i < m_finalTreeNodes.size(); i++) {
+		//Clear bin for next frame
+		m_finalTreeNodes[i]->m_containing.clear();
+		for (unsigned int j = 0; j < m_rigidbodies.size(); j++) {
+			m_broadPhase.TestAgainstAABBTree(m_rigidbodies[j], m_finalTreeNodes[i]);
+		}
+	}
+
+	//@Broadphase for each bin
+	for (unsigned int i = 0; i < m_finalTreeNodes.size(); i++) {
+		//Each node is a separate space, where we do a N^2 collision test.
+		for (unsigned int j = 0; j < m_finalTreeNodes[i]->m_containing.size(); j++) {
+			//Each rb checks upwards, so we avoid redundant collision checks
+			for (unsigned int k = j + 1; k < m_finalTreeNodes[i]->m_containing.size(); k++) {
+				if (ComputeBroadPhase(m_finalTreeNodes[i]->m_containing[j], m_finalTreeNodes[i]->m_containing[k])) {
+					m_pairs.push_back(make_pair(m_finalTreeNodes[i]->m_containing[j], m_finalTreeNodes[i]->m_containing[k]));
+				}
+			}
+		}
+	}
+
+	//@Start nulling out collider pairs
+	//@Medium Phase
+	//@Narrow Phase
+	for (unsigned int i = 0; i < m_pairs.size(); i++) {
+		ComputeNarrowPhase(m_pairs[i].first, m_pairs[i].second, dt);
+	}
+
+	///@Surviving pairs, with contact points, penetration and normal information have been logged to solver and MUST be colliding
+	m_narrowPhase.m_solver.Solve(dt);
+
+	//@Last loop: Integration
 	for (unsigned int i = 0; i < m_rigidbodies.size(); i++) {
 		RigidbodyComponent* currentRb = m_rigidbodies[i];
 		//@Integration
@@ -151,41 +238,6 @@ void PhysicSystem::UpdatePhysics(float dt) {
 		currentRb->m_force = Vector3::Zero;
 		currentRb->m_torque = Vector3::Zero;
 	}
-
-	//Get all 'Final' AABBTree nodes (Recursion)
-	vector<AABBNode*> m_finalTreeNodes = m_broadPhase.GetFinalNodes(&m_broadPhase.m_AABBTreeRoot);
-
-	//@SSScheme
-	for (unsigned int i = 0; i < m_finalTreeNodes.size(); i++) {
-		//Clear bin for next frame
-		m_finalTreeNodes[i]->m_containing.clear();
-		for (unsigned int j = 0; j < m_rigidbodies.size(); j++) {
-			m_broadPhase.TestAgainstAABBTree(m_rigidbodies[j], m_finalTreeNodes[i]);
-		}
-	}
-
-	//@Broadphase for each bin
-	for (unsigned int i = 0; i < m_finalTreeNodes.size(); i++) {
-		//Each node is a separate space, where we do a N^2 collision test.
-		for (unsigned int j = 0; j < m_finalTreeNodes[i]->m_containing.size(); j++) {
-			//Each rb checks upwards, so we avoid redundant collision checks
-			for (unsigned int k = j + 1; k < m_finalTreeNodes[i]->m_containing.size(); k++) {
-				if (ComputeBroadPhase(m_finalTreeNodes[i]->m_containing[j], m_finalTreeNodes[i]->m_containing[k])) {
-					m_pairs.push_back(make_pair(m_finalTreeNodes[i]->m_containing[j], m_finalTreeNodes[i]->m_containing[k]));
-				}
-			}
-		}
-	}
-
-	//@Start nulling out collider pairs
-	//@Medium Phase
-	//@Narrow Phase
-	for (unsigned int i = 0; i < m_pairs.size(); i++) {
-		ComputeNarrowPhase(m_pairs[i].first, m_pairs[i].second, dt);
-	}
-
-	///@Surviving pairs, with contact points, penetration and normal information have been logged to solver and MUST be colliding
-	m_narrowPhase.m_solver.Solve(dt);
 }
 //@BROADPHASE
 bool PhysicSystem::ComputeBroadPhase(RigidbodyComponent * rb1, RigidbodyComponent * rb2) {
@@ -264,40 +316,36 @@ bool PhysicSystem::ComputeNarrowPhase(RigidbodyComponent * rb1, RigidbodyCompone
 void PhysicSystem::EnableUniformGrid()
 {
 	m_uniformGrid.isEnabled = true;
+	m_hierarchicalGrid.isEnabled = false;
 	//@Add eight children to the rootNode
 	m_broadPhase.m_AABBTreeRoot.m_children.clear();//Just in case
-	Vector3 centre = m_broadPhase.m_AABBTreeRoot.m_centre;
-	Vector3 halfExtents = m_broadPhase.m_AABBTreeRoot.m_AABB.m_halfExtents;
-	m_broadPhase.m_AABBTreeRoot.m_children.push_back(AABBNode(halfExtents / 2, centre + Vector3(halfExtents.x / 2, halfExtents.y / 2, halfExtents.z / 2)));//Right, top, front
-	m_broadPhase.m_AABBTreeRoot.m_children.push_back(AABBNode(halfExtents / 2, centre + Vector3(-halfExtents.x / 2, halfExtents.y / 2, halfExtents.z / 2)));//Left, top, front
-	m_broadPhase.m_AABBTreeRoot.m_children.push_back(AABBNode(halfExtents / 2, centre + Vector3(-halfExtents.x / 2, -halfExtents.y / 2, halfExtents.z / 2)));//Left, bottom, front
-	m_broadPhase.m_AABBTreeRoot.m_children.push_back(AABBNode(halfExtents / 2, centre + Vector3(halfExtents.x / 2, -halfExtents.y / 2, halfExtents.z / 2)));//Right, bottom, front
-
-	m_broadPhase.m_AABBTreeRoot.m_children.push_back(AABBNode(halfExtents / 2, centre + Vector3(halfExtents.x / 2, halfExtents.y / 2, -halfExtents.z / 2)));//Right, top, back
-	m_broadPhase.m_AABBTreeRoot.m_children.push_back(AABBNode(halfExtents / 2, centre + Vector3(-halfExtents.x / 2, halfExtents.y / 2, -halfExtents.z / 2)));//Left, top, back
-	m_broadPhase.m_AABBTreeRoot.m_children.push_back(AABBNode(halfExtents / 2, centre + Vector3(-halfExtents.x / 2, -halfExtents.y / 2, -halfExtents.z / 2)));//Left, bottom, back
-	m_broadPhase.m_AABBTreeRoot.m_children.push_back(AABBNode(halfExtents / 2, centre + Vector3(halfExtents.x / 2, -halfExtents.y / 2, -halfExtents.z / 2)));//Right, bottom, back
+	m_broadPhase.ExpandNode(&m_broadPhase.m_AABBTreeRoot);
 }
 
 void PhysicSystem::DisableUniformGrid()
 {
-	if (m_hierarchicalGrid.isEnabled) {
-		DisableHierarchicalGrid();
-	}
 	//Then disable itself
 	//@Right now, the tree should consist of a root node, and eigh child nodes only.
-	//Simply delete the rootNode's children?
+	//Simply delete the rootNode's children
 	m_broadPhase.m_AABBTreeRoot.m_children.clear();
 	m_uniformGrid.isEnabled = false;
 }
 
 void PhysicSystem::EnableHierarchicalGrid()
 {
-
+	m_hierarchicalGrid.isEnabled = true;
+	m_uniformGrid.isEnabled = false;
+	//@Grid should be empty with only the root node now.
+	m_broadPhase.m_AABBTreeRoot.m_children.clear();
 }
 
 void PhysicSystem::DisableHierarchicalGrid()
 {
+	//Then disable itself
+	//@Right now, the tree should consist of a root node, and eigh child nodes only.
+	//Simply delete the rootNode's children?
+	m_broadPhase.m_AABBTreeRoot.m_children.clear();
+	m_hierarchicalGrid.isEnabled = false;
 }
 
 

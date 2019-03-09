@@ -30,7 +30,7 @@ ObjectSystem::~ObjectSystem() {
 void ObjectSystem::Initialize(ID3D11Device1* device, ID3D11DeviceContext1 * deviceContext)
 {
 	//@What do here? LoadSceneOne
-	LoadScene(1);
+	LoadScene(0);
 }
 void ObjectSystem::InitWindow(D3D11_VIEWPORT screenViewport)
 {
@@ -119,27 +119,27 @@ void ObjectSystem::LoadScene( unsigned int index)
 			AddObject(mySphere2);
 
 
-			GameObject * mySphere3 = new GameObject("Sphere3", Vector3(-0.5, 10.0f, -7.f));
+			GameObject * mySphere3 = new GameObject("Sphere3", Vector3(-1.5, 10.0f, -7.f));
 			mySphere3->AddComponent(new RigidbodyComponent(0.5f, 1.0f, false, Colors::Red));
 			AddObject(mySphere3);
 
-			GameObject * mySphere4 = new GameObject("Sphere4", Vector3(0.5, 10.0f, -7.f));
+			GameObject * mySphere4 = new GameObject("Sphere4", Vector3(1.5, 10.0f, -7.f));
 			mySphere4->AddComponent(new RigidbodyComponent(0.5f, 1.f, false, Colors::Red));
 			AddObject(mySphere4);
 
-			GameObject * mySphere5 = new GameObject("Sphere5", Vector3(-0.5, 10.0f, -12.f));
+			GameObject * mySphere5 = new GameObject("Sphere5", Vector3(-1.5, 10.0f, -12.f));
 			mySphere5->AddComponent(new RigidbodyComponent(0.5f, 1.0f, false, Colors::Red));
 			AddObject(mySphere5);
 
-			GameObject * mySphere6 = new GameObject("Sphere6", Vector3(0.5, 10.0f, -12.f));
+			GameObject * mySphere6 = new GameObject("Sphere6", Vector3(1.5, 10.0f, -12.f));
 			mySphere6->AddComponent(new RigidbodyComponent(0.5f, 1.f, false, Colors::Red));
 			AddObject(mySphere6);
 
-			GameObject * mySphere7 = new GameObject("Sphere7", Vector3(-0.5, 10.0f, 3.f));
+			GameObject * mySphere7 = new GameObject("Sphere7", Vector3(-1.5, 10.0f, 3.f));
 			mySphere7->AddComponent(new RigidbodyComponent(0.5f, 1.0f, false, Colors::Red));
 			AddObject(mySphere7);
 
-			GameObject * mySphere8 = new GameObject("Sphere8", Vector3(0.5, 10.0f, 3.f));
+			GameObject * mySphere8 = new GameObject("Sphere8", Vector3(1.5, 10.0f, 3.f));
 			mySphere8->AddComponent(new RigidbodyComponent(0.5f, 1.f, false, Colors::Red));
 			AddObject(mySphere8);
 
@@ -194,7 +194,7 @@ void ObjectSystem::LoadScene( unsigned int index)
 			mySphereBound10->AddComponent(new RigidbodyComponent(10.f, 100.f, true));
 			AddObject(mySphereBound10);
 
-			GameObject * mySphereBound11 = new GameObject("SphereBound11", Vector3(0, 1.f, 12.f));
+			GameObject * mySphereBound11 = new GameObject("SphereBound11", Vector3(0, 1.f, 18.f));
 			mySphereBound11->AddComponent(new RigidbodyComponent(10.f, 100.f, true));
 			AddObject(mySphereBound11);
 

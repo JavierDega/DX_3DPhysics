@@ -96,23 +96,57 @@ vector<AABBNode*> BroadPhase::GetFinalNodes(AABBNode * rootNode)
 {
 	vector<AABBNode*> finalNodes;
 	if (rootNode->m_children.empty()) {
+		//Is empty = is final
 		finalNodes.push_back(rootNode);
 	}
 	else {
+		//Is not empty
 		for (unsigned int i = 0; i < rootNode->m_children.size(); i++) {
 			//Get the vector returned from calling the function on them
 			//If that vector is not empty, we add it to ours
 			vector<AABBNode*> childrenNodes = GetFinalNodes(&rootNode->m_children[i]);
-			if (!childrenNodes.empty()) {//@Redundant check
-				for (unsigned int j = 0; j < childrenNodes.size(); j++) {
-					finalNodes.push_back(childrenNodes[j]);
-				}
+			//@There's at least one, itself
+			for (unsigned int j = 0; j < childrenNodes.size(); j++) {
+				finalNodes.push_back(childrenNodes[j]);
 			}
 		}
 	}
 	return finalNodes;
 }
+//@Designed to search from top node
+std::vector<AABBNode*> BroadPhase::GetNonFinalNodes(AABBNode * rootNode)
+{
+	vector<AABBNode*> orderedNonFinalNodes;
+	if (rootNode->m_children.empty()) {
+		//This node is final.
+		//Don't add it to the vector
+	}
+	else {
+		//Node is non final.
+		//It can be semi-final or non final.(Children are final nodes or not)
+		for (unsigned int i = 0; i < rootNode->m_children.size(); i++) {
+			vector<AABBNode*> childNonFinalNodes = GetNonFinalNodes(&rootNode->m_children[i]);
+			for (unsigned int j = 0; j < childNonFinalNodes.size(); j++) {
+				orderedNonFinalNodes.push_back(childNonFinalNodes[j]);
+			}
+		}
+		orderedNonFinalNodes.push_back(rootNode);
+	}
+	return orderedNonFinalNodes;
+}
 
+/*GetNonFinalNodes(){
+	vector NonfinalNodes;
+	if (rootNode->m_children.empty()){
+		//Is a final node
+	}
+	else {
+		//It has children. they might be final or not
+		for(children)
+			NonFinalNodes.push(GetNonFinalNodes(children[i]))
+		NonFinalNodes.push_back(rootNode);
+	}
+}*/
 bool BroadPhase::TestAgainstAABBTree(RigidbodyComponent * rb, AABBNode * rootNode)
 {
 	AABB rbBox = ComputeAABB(rb);
@@ -121,4 +155,19 @@ bool BroadPhase::TestAgainstAABBTree(RigidbodyComponent * rb, AABBNode * rootNod
 		return true;
 	}
 	return false;
+}
+//@Add eight children with right size and centre point. Shrinking on the other hand, is just about clearing m_children.
+void BroadPhase::ExpandNode(AABBNode * rootNode)
+{
+	Vector3 centre = rootNode->m_centre;
+	Vector3 halfExtents = rootNode->m_AABB.m_halfExtents;
+	rootNode->m_children.push_back(AABBNode(halfExtents / 2, centre + Vector3(halfExtents.x / 2, halfExtents.y / 2, halfExtents.z / 2)));//Right, top, front
+	rootNode->m_children.push_back(AABBNode(halfExtents / 2, centre + Vector3(-halfExtents.x / 2, halfExtents.y / 2, halfExtents.z / 2)));//Left, top, front
+	rootNode->m_children.push_back(AABBNode(halfExtents / 2, centre + Vector3(-halfExtents.x / 2, -halfExtents.y / 2, halfExtents.z / 2)));//Left, bottom, front
+	rootNode->m_children.push_back(AABBNode(halfExtents / 2, centre + Vector3(halfExtents.x / 2, -halfExtents.y / 2, halfExtents.z / 2)));//Right, bottom, front
+
+	rootNode->m_children.push_back(AABBNode(halfExtents / 2, centre + Vector3(halfExtents.x / 2, halfExtents.y / 2, -halfExtents.z / 2)));//Right, top, back
+	rootNode->m_children.push_back(AABBNode(halfExtents / 2, centre + Vector3(-halfExtents.x / 2, halfExtents.y / 2, -halfExtents.z / 2)));//Left, top, back
+	rootNode->m_children.push_back(AABBNode(halfExtents / 2, centre + Vector3(-halfExtents.x / 2, -halfExtents.y / 2, -halfExtents.z / 2)));//Left, bottom, back
+	rootNode->m_children.push_back(AABBNode(halfExtents / 2, centre + Vector3(halfExtents.x / 2, -halfExtents.y / 2, -halfExtents.z / 2)));//Right, bottom, back
 }

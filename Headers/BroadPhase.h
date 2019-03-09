@@ -22,8 +22,10 @@ public:
 	AABB ComputeAABB(RigidbodyComponent * rb);
 	//@Recursive call
 	std::vector<AABBNode*> GetFinalNodes(AABBNode * rootNode);
+	std::vector<AABBNode*> GetNonFinalNodes(AABBNode * rootNode);
 	//@Recursive call
 	bool TestAgainstAABBTree(RigidbodyComponent * rb, AABBNode * rootNode);
+	void ExpandNode(AABBNode * rootNode);
 	//Variables
 	AABBNode m_AABBTreeRoot;
 

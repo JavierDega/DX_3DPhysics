@@ -140,26 +140,30 @@ void InputSystem::Update(float dt)
 	//@Does this need to be done?
 	relativeUp.Normalize();
 
+	float movement = MOVEMENT;
 	//Forward
+	if (kb.LeftShift) {
+		movement *= 5;
+	}
 	if (kb.W) {
-		*m_cam += relativeForward * MOVEMENT;
+		*m_cam += relativeForward * movement;
 	}
 	if (kb.S) {
-		*m_cam -= relativeForward * MOVEMENT;
+		*m_cam -= relativeForward * movement;
 	}
 	//Right
 	if (kb.D) {
-		*m_cam += relativeRight * MOVEMENT;
+		*m_cam += relativeRight * movement;
 	}
 	if (kb.A) {
-		*m_cam -= relativeRight * MOVEMENT;
+		*m_cam -= relativeRight * movement;
 	}
 	//Up
 	if (kb.Q) {
-		*m_cam += relativeUp * MOVEMENT;
+		*m_cam += relativeUp * movement;
 	}
 	if (kb.E) {
-		*m_cam -= relativeUp * MOVEMENT;
+		*m_cam -= relativeUp * movement;
 	}
 
 }
