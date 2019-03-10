@@ -107,7 +107,7 @@ bool NarrowPhase::SphereToOBB(RigidbodyComponent * rb1, RigidbodyComponent * rb2
 	}
 	return false;
 }
-
+//@Old
 bool NarrowPhase::OBBToOBB(RigidbodyComponent * rb1, RigidbodyComponent * rb2, float dt)
 {
 
@@ -184,6 +184,7 @@ bool NarrowPhase::OBBToOBB(RigidbodyComponent * rb1, RigidbodyComponent * rb2, f
 		return 1;
 	}
 	*/
+#pragma region Data
 	OrientedBoundingBox * a = static_cast<OrientedBoundingBox*>(rb1->m_shape);//a
 	OrientedBoundingBox * b = static_cast<OrientedBoundingBox*>(rb2->m_shape);//b
 
@@ -219,15 +220,15 @@ bool NarrowPhase::OBBToOBB(RigidbodyComponent * rb1, RigidbodyComponent * rb2, f
 	unsigned int m_edge1Index, m_edge2Index;//@Starts to be too much data?
 	unsigned int m_faceIndex;
 
-	//For solving in local space, then moving to global
-	Vector3 bRotatedAxes[3] = { AbsR.Right(), AbsR.Up(), AbsR.Forward() };
+#pragma endregion
 
+#pragma region MoveToReferenceFrameA
 	// Compute rotation matrix expressing b in a’s coordinate frame 
 	for (int i = 0; i < 3; i++)
 		for (int j = 0; j < 3; j++)
 			R.m[i][j] = au[i].Dot(bu[j]);
 
-	//R = ma * mb;
+	//R = ma.Transpose() * mb;
 
 	//@@ALTERNATIVE: Manually detecting degenerate case (When two edges are parallel) and skipping all edge cross product axes if so
 	//It can be proven that not false positives will come in this case https://www.randygaul.net/2014/05/22/deriving-obb-to-obb-intersection-sat/
@@ -238,6 +239,11 @@ bool NarrowPhase::OBBToOBB(RigidbodyComponent * rb1, RigidbodyComponent * rb2, f
 	for (int i = 0; i < 3; i++)
 		for (int j = 0; j < 3; j++)
 			AbsR.m[i][j] = abs(R.m[i][j]) + FLT_EPSILON;
+
+	//For solving in local space, then moving to global
+	Vector3 bRotatedAxes[3] = { AbsR.Right(), AbsR.Up(), AbsR.Forward() };
+
+#pragma endregion
 
 	//@Something to face case (Find incident face, reference face,..)
 	// Test axes L = A0, L = A1, L = A2 
@@ -932,6 +938,54 @@ bool NarrowPhase::OBBToOBB(RigidbodyComponent * rb1, RigidbodyComponent * rb2, f
 	}
 	m_solver.m_contactManifolds.push_back(manifold);
 	return true;
+}
+
+bool NarrowPhase::OBBToOBBSAT(RigidbodyComponent * rb1, RigidbodyComponent * rb2, float dt)
+{
+	//@Inspired by Randy Gaul's qu3e engine
+#pragma region Get Comfortable Data
+	TransformComponent transformA = rb1->m_owner->m_transform;
+	Matrix rotationA = Matrix::CreateFromQuaternion(transformA.m_rotation);
+	TransformComponent transformB = rb2->m_owner->m_transform;
+	Matrix rotationB = Matrix::CreateFromQuaternion(transformB.m_rotation);
+#pragma endregion
+
+	// Vector from center A to center B in A's space
+	Matrix aToB = Matrix::CreateTranslation(transformB.m_position - transformA.m_position);
+	Vector3 t = (rotationA * aToB).Translation();
+
+#pragma region Compute Reference Frame (Obj. A)
+	//B's frame in A's space
+	Matrix C = rotationA.Transpose()*rotationB;
+
+	Matrix absC;
+	bool parallel = false;
+	//@THIS BIT NOT FULLY UNDERSTOOD
+	const float kCosTol = float(1.0e-6);
+	for (int i = 0; i < 3; i++) {
+		for (int j = 0; j < 3; j++) {
+			float val = abs(C.m[i][j]);//@Matrix row major or column major? Might help to clarify
+			absC.m[i][j] = val;
+
+			if (val + kCosTol >= float(1.0))
+				parallel = true;
+		}
+	}
+#pragma endregion
+
+	// Query states
+	float s;
+	float aMax = -FLT_MAX;
+	float bMax = -FLT_MAX;
+	float eMax = -FLT_MAX;
+	int aAxis = ~0;
+	int bAxis = ~0;
+	int eAxis = ~0;
+	Vector3 nA;
+	Vector3 nB;
+	Vector3 nE;
+
+	return false;
 }
 
 DirectX::SimpleMath::Vector3 NarrowPhase::FindIntersectionWithPlaneFromDistances(DirectX::SimpleMath::Vector3 start, DirectX::SimpleMath::Vector3 end, float d1, float d2)

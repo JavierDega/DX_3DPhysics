@@ -31,7 +31,7 @@ ObjectSystem::~ObjectSystem() {
 void ObjectSystem::Initialize(ID3D11Device1* device, ID3D11DeviceContext1 * deviceContext)
 {
 	//@What do here? LoadSceneOne
-	LoadScene(0);
+	LoadScene(1);
 }
 void ObjectSystem::InitWindow(D3D11_VIEWPORT screenViewport)
 {
