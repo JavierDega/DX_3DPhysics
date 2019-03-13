@@ -16,11 +16,7 @@ NarrowPhase::~NarrowPhase()
 {
 }
 
-void NarrowPhase::ApplyImpulse(DirectX::SimpleMath::Vector3 impulse, DirectX::SimpleMath::Vector3 contactVector)
-{
-}
-
-bool NarrowPhase::SphereToSphere(RigidbodyComponent * rb1, RigidbodyComponent * rb2, float dt)
+bool NarrowPhase::SphereToSphere(RigidbodyComponent * rb1, RigidbodyComponent * rb2)
 {
 	//@At this point it can be a static_cast
 	Sphere * sphere1 = static_cast<Sphere*>(rb1->m_shape);
@@ -61,7 +57,7 @@ bool NarrowPhase::SphereToSphere(RigidbodyComponent * rb1, RigidbodyComponent * 
 	return false;
 }
 
-bool NarrowPhase::SphereToOBB(RigidbodyComponent * rb1, RigidbodyComponent * rb2, float dt)
+bool NarrowPhase::SphereToOBB(RigidbodyComponent * rb1, RigidbodyComponent * rb2)
 {
 	Sphere * sphere1 = static_cast<Sphere*>(rb1->m_shape);
 	OrientedBoundingBox * obb2 = static_cast<OrientedBoundingBox*>(rb2->m_shape);
@@ -107,8 +103,326 @@ bool NarrowPhase::SphereToOBB(RigidbodyComponent * rb1, RigidbodyComponent * rb2
 	}
 	return false;
 }
-//@Old
-bool NarrowPhase::OBBToOBB(RigidbodyComponent * rb1, RigidbodyComponent * rb2, float dt)
+inline bool TrackPenetration(float curPen, float * minPen, Vector3 curAxis, Vector3 *minAxis) {
+	if (curPen < *minPen) {
+		*minPen = curPen;
+		*minAxis = curAxis;
+		return true;
+	}
+	return false;
+}
+bool NarrowPhase::OBBToOBB(RigidbodyComponent * rb1, RigidbodyComponent * rb2) {
+	/* Christer Ericson's Real-Time collision detection
+	int TestOBBOBB(OBB &a, OBB &b) {
+		float ra, rb;
+		Matrix33 R, AbsR;
+		// Compute rotation matrix expressing b in a’s coordinate frame
+		for (int i = 0; i < 3;i++)
+			for (int j = 0; j < 3;j++)
+				R[i][j] = Dot(a.u[i], b.u[j]);
+
+		// Compute translation vector t
+		Vector t = b.c - a.c;
+		// Bring translation into a’s coordinate frame
+		t = Vector(Dot(t, a.u[0]), Dot(t, a.u[2]), Dot(t, a.u[2]));
+		// Compute common subexpressions. Add in an epsilon term to
+		// counteract arithmetic errors when two edges are parallel and
+		// their cross product is (near) null (see text for details)
+		for (int i = 0; i < 3;i++)
+			for (int j = 0; j < 3;j++)
+				AbsR[i][j] = Abs(R[i][j]) + EPSILON;
+		// Test axes L = A0, L = A1, L = A2
+		for (int i = 0; i < 3;i++)
+		{
+			ra = a.e[i];
+			rb = b.e[0] * AbsR[i][0] + b.e[1] * AbsR[i][1] + b.e[2] * AbsR[i][2];
+			if (Abs(t[i]) > ra + rb) return 0;
+		}
+		// Test axes L = B0, L = B1, L = B2
+		for (int i = 0; i < 3;i++)
+		{
+			ra = a.e[0] * AbsR[0][i] + a.e[1] * AbsR[1][i] + a.e[2] * AbsR[2][i];
+			rb = b.e[i];
+			if (Abs(t[0] * R[0][i] + t[1] * R[1][i] + t[2] * R[2][i]) > ra + rb) return 0;
+		}
+		// Test axis L = A0 x B0
+		ra = a.e[1] * AbsR[2][0] + a.e[2] * AbsR[1][0];
+		rb = b.e[1] * AbsR[0][2] + b.e[2] * AbsR[0][1];
+		if (Abs(t[2] * R[1][0] - t[1] * R[2][0]) > ra + rb) return 0;
+		// Test axis L = A0 x B1
+		ra = a.e[1] * AbsR[2][1] + a.e[2] * AbsR[1][1];
+		rb = b.e[0] * AbsR[0][2] + b.e[2] * AbsR[0][0];
+		if (Abs(t[2] * R[1][1] - t[1] * R[2][1]) > ra + rb) return 0;
+		// Test axis L = A0 x B2
+		ra = a.e[1] * AbsR[2][2] + a.e[2] * AbsR[1][2];
+		rb = b.e[0] * AbsR[0][1] + b.e[1] * AbsR[0][0];
+		if (Abs(t[2] * R[1][2] - t[1] * R[2][2]) > ra + rb) return 0;
+		// Test axis L = A1 x B0
+		ra = a.e[0] * AbsR[2][0] + a.e[2] * AbsR[0][0];
+		rb = b.e[1] * AbsR[1][2] + b.e[2] * AbsR[1][1];
+		if (Abs(t[0] * R[2][0] - t[2] * R[0][0]) > ra + rb) return 0;
+		// Test axis L = A1 x B1
+		ra = a.e[0] * AbsR[2][1] + a.e[2] * AbsR[0][1];
+		rb = b.e[0] * AbsR[1][2] + b.e[2] * AbsR[1][0];
+		if (Abs(t[0] * R[2][1] - t[2] * R[0][1]) > ra + rb) return 0;
+		// Test axis L = A1 x B2
+		ra = a.e[0] * AbsR[2][2] + a.e[2] * AbsR[0][2];
+		rb = b.e[0] * AbsR[1][1] + b.e[1] * AbsR[1][0];
+		if (Abs(t[0] * R[2][2] - t[2] * R[0][2]) > ra + rb) return 0;
+		// Test axis L = A2 x B0
+		ra = a.e[0] * AbsR[1][0] + a.e[1] * AbsR[0][0];
+		rb = b.e[1] * AbsR[2][2] + b.e[2] * AbsR[2][1];
+		if (Abs(t[1] * R[0][0] - t[0] * R[1][0]) > ra + rb) return 0;
+		// Test axis L = A2 x B1
+		ra = a.e[0] * AbsR[1][1] + a.e[1] * AbsR[0][1];
+		rb = b.e[0] * AbsR[2][2] + b.e[2] * AbsR[2][0];
+		if (Abs(t[1] * R[0][1] - t[0] * R[1][1]) > ra + rb) return 0;
+		// Test axis L = A2 x B2
+		ra = a.e[0] * AbsR[1][2] + a.e[1] * AbsR[0][2];
+		rb = b.e[0] * AbsR[2][1] + b.e[1] * AbsR[2][0];
+		if (Abs(t[1] * R[0][2] - t[0] * R[1][2]) > ra + rb) return 0;
+		// Since no separating axis is found, the OBBs must be intersecting
+		return 1;
+	}*/
+#pragma region Data
+	OrientedBoundingBox* boxA = static_cast<OrientedBoundingBox*>(rb1->m_shape);
+	OrientedBoundingBox* boxB = static_cast<OrientedBoundingBox*>(rb2->m_shape);
+	TransformComponent transformA = rb1->m_owner->m_transform;
+	TransformComponent transformB = rb2->m_owner->m_transform;
+	Matrix rotationA = Matrix::CreateFromQuaternion(transformA.m_rotation);
+	Matrix rotationB = Matrix::CreateFromQuaternion(transformB.m_rotation);
+	//Arrays
+	Vector3 basisA[3] = { rotationA.Right(), rotationA.Up(), rotationA.Forward() };
+	Vector3 basisB[3] = { rotationB.Right(), rotationB.Up(), rotationB.Forward() };
+	float extentsA[3] = { boxA->m_halfExtents.x, boxA->m_halfExtents.y, boxA->m_halfExtents.z };
+	float extentsB[3] = { boxB->m_halfExtents.x, boxB->m_halfExtents.y, boxB->m_halfExtents.z };
+
+	float ra, rb;//Projection of boxA and boxB
+	float dist;//Dist along an arbitrary axis
+	float penetration = FLT_MAX;
+	Vector3 axis;//@We're logging values in global space 
+	Matrix R, AbsR;
+#pragma endregion
+
+#pragma region Reference Frame
+	// Compute rotation matrix expressing b in a’s coordinate frame
+	for (int i = 0; i < 3; i++)
+		for (int j = 0; j < 3; j++)
+			R.m[i][j] = basisA[i].Dot(basisB[j]);
+
+	// Compute translation vector t
+	Vector3 tv = transformB.m_position - transformA.m_position;
+	// Bring translation into a’s coordinate frame
+	float t[3] = { tv.Dot(rotationA.Right()), tv.Dot(rotationA.Up()), tv.Dot(rotationA.Forward()) };
+
+	// Compute common subexpressions. Add in an epsilon term to
+	// counteract arithmetic errors when two edges are parallel and
+	// their cross product is (near) null (see text for details)
+	for (int i = 0; i < 3; i++)
+		for (int j = 0; j < 3; j++)
+			AbsR.m[i][j] = abs(R.m[i][j]) + FLT_EPSILON;
+
+#pragma endregion
+
+#pragma region Face Axes
+	// Test axes L = A0, L = A1, L = A2
+	for (int i = 0; i < 3; i++)
+	{
+		ra = extentsA[i];
+		rb = extentsB[0] * AbsR.m[i][0] + extentsB[1] * AbsR.m[i][1] + extentsB[2] * AbsR.m[i][2];
+		dist = abs(t[i]);
+		if (dist > ra + rb) return 0;
+		else {
+			float curPen = (ra + rb) - dist;//@Positive value
+			TrackPenetration(curPen, &penetration, basisA[i], &axis);
+		}
+	}
+	// Test axes L = B0, L = B1, L = B2
+	for (int i = 0; i < 3; i++)
+	{
+		ra = extentsA[0] * AbsR.m[0][i] + extentsA[1] * AbsR.m[1][i] + extentsA[2] * AbsR.m[2][i];
+		rb = extentsB[i];
+		dist = abs(t[0] * R.m[0][i] + t[1] * R.m[1][i] + t[2] * R.m[2][i]);
+		if (dist > ra + rb) return 0;
+		else {
+			float curPen = (ra + rb) - dist;
+			TrackPenetration(curPen, &penetration, basisB[i], &axis);
+		}
+	}
+#pragma endregion
+
+#pragma region CP Edge Axes
+
+	// Test axis L = A0 x B0
+	ra = extentsA[1] * AbsR.m[2][0] + extentsA[2] * AbsR.m[1][0];
+	rb = extentsB[1] * AbsR.m[0][2] + extentsB[2] * AbsR.m[0][1];
+	dist = abs(t[2] * R.m[1][0] - t[1] * R.m[2][0]);
+	if (dist > ra + rb) return 0;
+	else {
+		float curPen = (ra + rb) - dist;
+		Vector3 cpAxis = rotationA.Right().Cross(rotationB.Right());
+		TrackPenetration(curPen, &penetration, cpAxis, &axis);
+	}
+
+	// Test axis L = A0 x B1
+	ra = extentsA[1] * AbsR.m[2][1] + extentsA[2] * AbsR.m[1][1];
+	rb = extentsB[0] * AbsR.m[0][2] + extentsB[2] * AbsR.m[0][0];
+	dist = abs(t[2] * R.m[1][1] - t[1] * R.m[2][1]);
+	if (dist > ra + rb) return 0;
+	else {
+		float curPen = (ra + rb) - dist;
+		Vector3 cpAxis = rotationA.Right().Cross(rotationB.Up());
+		TrackPenetration(curPen, &penetration, cpAxis, &axis);
+	}
+
+	// Test axis L = A0 x B2
+	ra = extentsA[1] * AbsR.m[2][2] + extentsA[2] * AbsR.m[1][2];
+	rb = extentsB[0] * AbsR.m[0][1] + extentsB[1] * AbsR.m[0][0];
+	dist = abs(t[2] * R.m[1][2] - t[1] * R.m[2][2]);
+	if (dist > ra + rb) return 0;
+	else {
+		float curPen = (ra + rb) - dist;
+		Vector3 cpAxis = rotationA.Right().Cross(rotationB.Forward());
+		TrackPenetration(curPen, &penetration, cpAxis, &axis);
+	}
+
+	// Test axis L = A1 x B0
+	ra = extentsA[0] * AbsR.m[2][0] + extentsA[2] * AbsR.m[0][0];
+	rb = extentsB[1] * AbsR.m[1][2] + extentsB[2] * AbsR.m[1][1];
+	dist = abs(t[0] * R.m[2][0] - t[2] * R.m[0][0]);
+	if (dist > ra + rb) return 0;
+	else {
+		float curPen = (ra + rb) - dist;
+		Vector3 cpAxis = rotationA.Up().Cross(rotationB.Right());
+		TrackPenetration(curPen, &penetration, cpAxis, &axis);
+	}
+
+	// Test axis L = A1 x B1
+	ra = extentsA[0] * AbsR.m[2][1] + extentsA[2] * AbsR.m[0][1];
+	rb = extentsB[0] * AbsR.m[1][2] + extentsB[2] * AbsR.m[1][0];
+	dist = abs(t[0] * R.m[2][1] - t[2] * R.m[0][1]);
+	if (dist > ra + rb) return 0;
+	else {
+		float curPen = (ra + rb) - dist;
+		Vector3 cpAxis = rotationA.Up().Cross(rotationB.Up());
+		TrackPenetration(curPen, &penetration, cpAxis, &axis);
+	}
+
+	// Test axis L = A1 x B2
+	ra = extentsA[0] * AbsR.m[2][2] + extentsA[2] * AbsR.m[0][2];
+	rb = extentsB[0] * AbsR.m[1][1] + extentsB[1] * AbsR.m[1][0];
+	dist = abs(t[0] * R.m[2][2] - t[2] * R.m[0][2]);
+	if (dist > ra + rb) return 0;
+	else {
+		float curPen = (ra + rb) - dist;
+		Vector3 cpAxis = rotationA.Up().Cross(rotationB.Forward());
+		TrackPenetration(curPen, &penetration, cpAxis, &axis);
+	}
+
+	// Test axis L = A2 x B0
+	ra = extentsA[0] * AbsR.m[1][0] + extentsA[1] * AbsR.m[0][0];
+	rb = extentsB[1] * AbsR.m[2][2] + extentsB[2] * AbsR.m[2][1];
+	dist = abs(t[1] * R.m[0][0] - t[0] * R.m[1][0]);
+	if (dist > ra + rb) return 0;
+	else {
+		float curPen = (ra + rb) - dist;
+		Vector3 cpAxis = rotationA.Forward().Cross(rotationB.Right());
+		TrackPenetration(curPen, &penetration, cpAxis, &axis);
+	}
+
+	// Test axis L = A2 x B1
+	ra = extentsA[0] * AbsR.m[1][1] + extentsA[1] * AbsR.m[0][1];
+	rb = extentsB[0] * AbsR.m[2][2] + extentsB[2] * AbsR.m[2][0];
+	dist = abs(t[1] * R.m[0][1] - t[0] * R.m[1][1]);
+	if (dist > ra + rb) return 0;
+	else {
+		float curPen = (ra + rb) - dist;
+		Vector3 cpAxis = rotationA.Forward().Cross(rotationB.Up());
+		TrackPenetration(curPen, &penetration, cpAxis, &axis);
+	}
+
+	// Test axis L = A2 x B2
+	ra = extentsA[0] * AbsR.m[1][2] + extentsA[1] * AbsR.m[0][2];
+	rb = extentsB[0] * AbsR.m[2][1] + extentsB[1] * AbsR.m[2][0];
+	dist = abs(t[1] * R.m[0][2] - t[0] * R.m[1][2]);
+	if (dist > ra + rb) return 0;
+	else {
+		float curPen = (ra + rb) - dist;
+		Vector3 cpAxis = rotationA.Forward().Cross(rotationB.Forward());
+		TrackPenetration(curPen, &penetration, cpAxis, &axis);
+	}
+	// Since no separating axis is found, the OBBs must be intersecting
+#pragma endregion
+
+#pragma region My contact creation
+	ContactManifold manifold;
+	manifold.m_maxPenetration = penetration;
+	manifold.m_rigidbodies.first = rb1;
+	manifold.m_rigidbodies.second = rb2;
+	manifold.m_normal = (axis.Dot(tv) > 0) ? (-axis) : (axis);//@Make sure it points to object A
+
+	Vector3 contactPoint;
+	//@Idea: Regardless of Edge-Edge or Face-Face, we always have a normal.
+	//We can approximate a contact point (Avoiding Incident, Reference Faces, Clipping, Supporting Edge calculations,...)
+	//To do this we find the face that most points towards the normal
+	//Then we find the intersection point with the ray that goes outwards from the center, in the normal's direction
+	//And the plane defined by the face we found
+	//@This test fails to return accurate results when boxes differ greatly in size.
+
+	Vector3 normal;
+	normal = (axis.Dot(tv) >= 0) ? (axis) : (-axis); //@Make sure it points outwards from A (to object B)
+	Plane planeA;
+	Vector3 p1 = transformA.m_position;
+	Vector3 p2;
+	float maxDp = -FLT_MAX;
+	
+	//Object a
+	for (int i = 0; i < 3; i++) {
+		float dp = normal.Dot(basisA[i]);
+		if (dp > maxDp) {
+			maxDp = dp;
+			planeA = Plane(transformA.m_position + basisA[i] * extentsA[i], basisA[i]);
+		}
+		dp = normal.Dot(-basisA[i]);
+		if (dp > maxDp) {
+			maxDp = dp;
+			planeA = Plane(transformA.m_position - basisA[i]* extentsA[i], -basisA[i]);
+		}
+	}
+	//So now we have the plane. Let's assume a segment with the normal's direction, and length of translationVector
+	p2 = p1 + tv.Length() * normal;//We'll also assume they do intersect the plane, and get straight to computing the point with LERP
+
+	Vector3 intersectionPointA = FindIntersectionWithPlaneFromDistances(p1, p2, DistPointPlane(p1, planeA), DistPointPlane(p2, planeA));
+
+	//Object b
+	normal *= -1; //@Make sure it points outwards from B (to object A)
+	Plane planeB;
+	p1 = transformB.m_position;
+
+	//Object a
+	for (int i = 0; i < 3; i++) {
+		float dp = normal.Dot(basisB[i]);
+		if (dp > maxDp) {
+			maxDp = dp;
+			planeB = Plane(transformB.m_position + basisB[i] * extentsB[i], basisB[i]);
+		}
+		dp = normal.Dot(-basisB[i]);
+		if (dp > maxDp) {
+			maxDp = dp;
+			planeB = Plane(transformB.m_position - basisB[i] * extentsB[i], -basisB[i]);
+		}
+	}
+	//So now we have the plane. Let's assume a segment with the normal's direction, and length of translationVector
+	p2 = p1 + tv.Length() * normal;//We'll also assume they do intersect the plane, and get straight to computing the point with LERP
+
+	Vector3 intersectionPointB = FindIntersectionWithPlaneFromDistances(p1, p2, DistPointPlane(p1, planeB), DistPointPlane(p2, planeB));
+	manifold.m_points.push_back(intersectionPointA + Vector3((intersectionPointB - intersectionPointA)/2));
+	m_solver.m_contactManifolds.push_back(manifold);
+#pragma endregion
+	return true;
+}
+#ifdef FAILED_APPROACHES
+bool NarrowPhase::OBBToOBB(RigidbodyComponent * rb1, RigidbodyComponent * rb2)
 {
 
 	/* Christer Ericson's Real-Time collision detection
@@ -228,8 +542,6 @@ bool NarrowPhase::OBBToOBB(RigidbodyComponent * rb1, RigidbodyComponent * rb2, f
 		for (int j = 0; j < 3; j++)
 			R.m[i][j] = au[i].Dot(bu[j]);
 
-	//R = ma.Transpose() * mb;
-
 	//@@ALTERNATIVE: Manually detecting degenerate case (When two edges are parallel) and skipping all edge cross product axes if so
 	//It can be proven that not false positives will come in this case https://www.randygaul.net/2014/05/22/deriving-obb-to-obb-intersection-sat/
 
@@ -245,6 +557,7 @@ bool NarrowPhase::OBBToOBB(RigidbodyComponent * rb1, RigidbodyComponent * rb2, f
 
 #pragma endregion
 
+#pragma region Axis tests
 	//@Something to face case (Find incident face, reference face,..)
 	// Test axes L = A0, L = A1, L = A2 
 	for (int i = 0; i < 3; i++)
@@ -448,6 +761,10 @@ bool NarrowPhase::OBBToOBB(RigidbodyComponent * rb1, RigidbodyComponent * rb2, f
 		}
 	}
 
+#pragma endregion
+
+#ifdef PROPER_CONTACTS
+#pragma region Contact creation
 // Since no separating axis is found, the OBBs must be intersecting
 //@Manifold generation
 //@Two approaches for querying contact data: Face to face contact and edge to edge
@@ -724,7 +1041,9 @@ bool NarrowPhase::OBBToOBB(RigidbodyComponent * rb1, RigidbodyComponent * rb2, f
 		vector<Vector3> contactPoints = OBBClip(facePoints, supportPlanes, referencePlane);
 		vector<Vector3> finalContactPoints;
 
-		if (contactPoints.size() == 0) return false;//@Just in case
+		if (contactPoints.size() == 0) {
+			return false;//@Just in case
+		}
 
 		//Filter out all contactPoints on the reference plane's surface.
 		for (unsigned int i = 0; i < contactPoints.size(); i++) {
@@ -937,22 +1256,89 @@ bool NarrowPhase::OBBToOBB(RigidbodyComponent * rb1, RigidbodyComponent * rb2, f
 
 	}
 	m_solver.m_contactManifolds.push_back(manifold);
+#pragma endregion
+#endif /*PROPER_CONTACTS*/
+
+#pragma region My contact creation approach
+	//My approach for contact creation:
+	//Get all face outward normals on obj 1, check one with maximum dp with axisOfMinimumPenetration
+	//Build plane with this face.
+	//Line intersection between line of axisOfMinimumPenetration going from center
+
+	//Do same for obj 2.
+	//Final contact point is midpoint between both.
+
+	ContactManifold manifold;
+	manifold.m_maxPenetration = m_penetrationDepth;
+	manifold.m_rigidbodies.first = rb1;
+	manifold.m_rigidbodies.second = rb2;
+
+	Matrix axisMatrix = Matrix::CreateTranslation(m_axisOfMinimumPenetration);
+	axisMatrix *= ma.Invert();
+	Vector3 globalAxis = axisMatrix.Translation();
+	//Flip normal if we need to
+	manifold.m_normal = (globalAxis.Dot(tv) >= 0) ? (-globalAxis) : (globalAxis);//@We follow convention to point towards A
+
+#pragma endregion
+
 	return true;
 }
 
-bool NarrowPhase::OBBToOBBSAT(RigidbodyComponent * rb1, RigidbodyComponent * rb2, float dt)
+//@SAT queries
+//@REMEMBER DX WORKS IN COLUMN MAJOR, OPPOSITE TO MAJORITY OF CONVENTIONS, SO WE FLIP INDEXING ORDER
+Vector3 GetColumn(Matrix m, int index) {
+	return Vector3(m.m[0][index], m.m[1][index], m.m[2][index]);
+}
+inline bool TrackFaceAxis(int * axis, int n, float s, float * sMax, const Vector3& normal, Vector3 * axisNormal) {
+	if (s > float(0.0))
+		return true;
+
+	if (s > *sMax)
+	{
+		*sMax = s;
+		*axis = n;
+		*axisNormal = normal;
+	}
+
+	return false;
+}
+inline bool TrackEdgeAxis(int * axis, int n, float s, float * sMax, const Vector3& normal, Vector3 * axisNormal)
+{
+	if (s > float (0.0))
+		return true;
+
+	float l = float (1.0) / normal.Length();
+	s *= l;
+
+	if (s > *sMax)
+	{
+		*sMax = s;
+		*axis = n;
+		*axisNormal = normal * l;
+	}
+
+	return false;
+}
+bool NarrowPhase::OBBToOBBSAT(RigidbodyComponent * rb1, RigidbodyComponent * rb2)
 {
 	//@Inspired by Randy Gaul's qu3e engine
 #pragma region Get Comfortable Data
+	OrientedBoundingBox * boxA = static_cast<OrientedBoundingBox*>(rb1->m_shape);
 	TransformComponent transformA = rb1->m_owner->m_transform;
 	Matrix rotationA = Matrix::CreateFromQuaternion(transformA.m_rotation);
+	OrientedBoundingBox * boxB = static_cast<OrientedBoundingBox*>(rb2->m_shape);
 	TransformComponent transformB = rb2->m_owner->m_transform;
 	Matrix rotationB = Matrix::CreateFromQuaternion(transformB.m_rotation);
-#pragma endregion
+
+	//Extents
+	Vector3 eA = boxA->m_halfExtents;
+	Vector3 eB = boxB->m_halfExtents;
 
 	// Vector from center A to center B in A's space
 	Matrix aToB = Matrix::CreateTranslation(transformB.m_position - transformA.m_position);
 	Vector3 t = (rotationA * aToB).Translation();
+#pragma endregion
+
 
 #pragma region Compute Reference Frame (Obj. A)
 	//B's frame in A's space
@@ -974,20 +1360,204 @@ bool NarrowPhase::OBBToOBBSAT(RigidbodyComponent * rb1, RigidbodyComponent * rb2
 #pragma endregion
 
 	// Query states
-	float s;
+	float s;//@Signed distance
 	float aMax = -FLT_MAX;
 	float bMax = -FLT_MAX;
 	float eMax = -FLT_MAX;
+	//Int representing axis index
 	int aAxis = ~0;
 	int bAxis = ~0;
 	int eAxis = ~0;
+	//Normal from A, from B, or from Edge
 	Vector3 nA;
 	Vector3 nB;
 	Vector3 nE;
 
-	return false;
-}
+#pragma region A faces
+	//a's x axis
+	s = abs(t.x) - (eA.x + GetColumn(absC, 0).Dot(eB));
+	if (TrackFaceAxis(&aAxis, 0, s, &aMax, rotationA.Right(), &nA))
+		return false;
 
+	//a's y axis
+	s = abs(t.y) - (eA.y + GetColumn(absC, 1).Dot(eB));
+	if (TrackFaceAxis(&aAxis, 1, s, &aMax, rotationA.Up(), &nA))
+		return false;
+
+	//a's z axis
+	s = abs(t.z) - (eA.z + GetColumn(absC, 2).Dot(eB));
+	if (TrackFaceAxis(&aAxis, 2, s, &aMax, rotationA.Forward(), &nA))
+		return false;
+#pragma endregion
+
+#pragma region B faces
+	//b's x axis
+	s = abs(t.Dot(C.Right())) - (eB.x + absC.Right().Dot(eA));
+	if (TrackFaceAxis(&bAxis, 3, s, &bMax, rotationB.Right(), &nB))
+		return false;
+
+	// b's y axis
+	s = abs(t.Dot(C.Up())) - (eB.y + absC.Up().Dot(eA));
+	if (TrackFaceAxis(&bAxis, 4, s, &bMax, rotationB.Up(), &nB))
+		return false;
+
+	// b's z axis
+	s = abs(t.Dot(C.Backward())) - (eB.z + absC.Backward().Dot(eA));//We need to flip Forward->Backwards due to DX11's weird Z convention.
+	if (TrackFaceAxis(&bAxis, 5, s, &bMax, rotationB.Backward(), &nB))
+		return false;
+#pragma endregion
+
+#pragma region Edge axes
+	//Cp edge checks
+	if (!parallel) {
+		// Edge axis checks
+		float rA;
+		float rB;
+
+		// Cross( a.x, b.x )
+		rA = eA.y * absC.m[0][2] + eA.z * absC.m[0][1];
+		rB = eB.y * absC.m[2][0] + eB.z * absC.m[1][0];
+		s = abs(t.z * C.m[0][1] - t.y * C.m[0][2]) - (rA + rB);
+		if (TrackEdgeAxis(&eAxis, 6, s, &eMax, Vector3(float(0.0), -C.m[0][2], C.m[0][1]), &nE))
+			return false;
+
+		// Cross( a.x, b.y )
+		rA = eA.y * absC.m[1][2] + eA.z * absC.m[1][1];
+		rB = eB.x * absC.m[2][0] + eB.z * absC.m[0][0];
+		s = abs(t.z * C.m[1][1] - t.y * C.m[1][2]) - (rA + rB);
+		if (TrackEdgeAxis(&eAxis, 7, s, &eMax, Vector3(float(0.0), -C.m[1][2], C.m[1][1]), &nE))
+			return false;
+
+		// Cross( a.x, b.z )
+		rA = eA.y * absC.m[2][2] + eA.z * absC.m[2][1];
+		rB = eB.x * absC.m[1][0] + eB.y * absC.m[0][0];
+		s = abs(t.z * C.m[2][1] - t.y * C.m[2][2]) - (rA + rB);
+		if (TrackEdgeAxis(&eAxis, 8, s, &eMax, Vector3( float(0.0), -C.m[2][2], C.m[2][1]), &nE))
+			return false;
+
+		// Cross( a.y, b.x )
+		rA = eA.x * absC.m[0][2] + eA.z * absC.m[0][0];
+		rB = eB.y * absC.m[2][1] + eB.z * absC.m[1][1];
+		s = abs(t.x * C.m[0][2] - t.z * C.m[0][0]) - (rA + rB);
+		if (TrackEdgeAxis(&eAxis, 9, s, &eMax, Vector3(C.m[0][2], float(0.0), -C.m[0][0]), &nE))
+			return false;
+
+		// Cross( a.y, b.y )
+		rA = eA.x * absC.m[1][2] + eA.z * absC.m[1][0];
+		rB = eB.x * absC.m[2][1] + eB.z * absC.m[0][1];
+		s = abs(t.x * C.m[1][2] - t.z * C.m[1][0]) - (rA + rB);
+		if (TrackEdgeAxis(&eAxis, 10, s, &eMax, Vector3(C.m[1][2], float(0.0), -C.m[1][0]), &nE))
+			return false;
+
+		// Cross( a.y, b.z )
+		rA = eA.x * absC.m[2][2] + eA.z * absC.m[2][0];
+		rB = eB.x * absC.m[1][1] + eB.y * absC.m[0][1];
+		s = abs(t.x * C.m[2][2] - t.z * C.m[2][0]) - (rA + rB);
+		if (TrackEdgeAxis(&eAxis, 11, s, &eMax, Vector3(C.m[2][2], float(0.0), -C.m[2][0]), &nE))
+			return false;
+
+		// Cross( a.z, b.x )
+		rA = eA.x * absC.m[0][1] + eA.y * absC.m[0][0];
+		rB = eB.y * absC.m[2][2] + eB.z * absC.m[1][2];
+		s = abs(t.y * C.m[0][0] - t.x * C.m[0][1]) - (rA + rB);
+		if (TrackEdgeAxis(&eAxis, 12, s, &eMax, Vector3(-C.m[0][1], C.m[0][0], float(0.0)), &nE))
+			return false;
+
+		// Cross( a.z, b.y )
+		rA = eA.x * absC.m[1][1] + eA.y * absC.m[1][0];
+		rB = eB.x * absC.m[2][2] + eB.z * absC.m[0][2];
+		s = abs(t.y * C.m[1][0] - t.x * C.m[1][1]) - (rA + rB);
+		if (TrackEdgeAxis(&eAxis, 13, s, &eMax, Vector3(-C.m[1][1], C.m[1][0], float(0.0)), &nE))
+			return false;
+
+		// Cross( a.z, b.z )
+		rA = eA.x * absC.m[2][1] + eA.y * absC.m[2][0];
+		rB = eB.x * absC.m[1][2] + eB.y * absC.m[0][2];
+		s = abs(t.y * C.m[2][0] - t.x * C.m[2][1]) - (rA + rB);
+		if (TrackEdgeAxis(&eAxis, 14, s, &eMax, Vector3(-C.m[2][1], C.m[2][0], float(0.0)), &nE))
+			return false;
+	}
+
+#pragma endregion
+
+	//Artificial axis bias to improve frame coherence
+#pragma region Frame Coherence
+	const float kRelTol = float(0.95);
+	const float kAbsTol = float(0.01);
+	int axis;
+	float sMax;
+	Vector3 n;
+	float faceMax = max(aMax, bMax);
+	if (kRelTol * eMax > faceMax + kAbsTol)
+	{
+		axis = eAxis;
+		sMax = eMax;
+		n = nE;
+	}
+
+	else
+	{
+		if (kRelTol * bMax > aMax + kAbsTol)
+		{
+			axis = bAxis;
+			sMax = bMax;
+			n = nB;
+		}
+
+		else
+		{
+			axis = aAxis;
+			sMax = aMax;
+			n = nA;
+		}
+	}
+
+	if (n.Dot(transformB.m_position - transformA.m_position) < 0.0f)
+		n = -n;
+	
+	assert(axis != ~0);
+#pragma endregion
+
+	//@Naive contact creation:
+
+#ifdef PROPER_CONTACTS
+#pragma region Proper Contact Creation
+	//Manifold generation
+	if (axis < 6) {
+		//Face case
+		TransformComponent referenceT;
+		TransformComponent incidentT;
+		Vector3 eR;//Extents reference
+		Vector3 eI;//Extents incident
+		bool flip;
+
+		if (axis < 3) {
+		
+			referenceT = transformA;
+			incidentT = transformB;
+			eR = boxA->m_halfExtents;
+			eI = boxB->m_halfExtents;
+			flip = false;
+		}
+
+		else {
+			referenceT = transformB;
+			incidentT = transformA;
+			eR = boxB->m_halfExtents;
+			eI = boxA->m_halfExtents;
+			flip = true;
+			n = -n;
+		}
+
+		// Compute reference and incident edge information necessary for clipping
+		Vector3 incident[4];
+	}
+
+
+#pragma endregion
+#endif /*PROPER_CONTACTS*/
+}
+#endif /*FAILED_APPROACHES*/
 DirectX::SimpleMath::Vector3 NarrowPhase::FindIntersectionWithPlaneFromDistances(DirectX::SimpleMath::Vector3 start, DirectX::SimpleMath::Vector3 end, float d1, float d2)
 {
 	//@Using linear interpolation

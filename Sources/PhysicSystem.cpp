@@ -115,6 +115,8 @@ void PhysicSystem::UpdatePhysics(float dt) {
 		rb->m_shape->m_AABBColor = Colors::Red;
 	}
 
+
+
 	//@Octree Update
 	if (m_hierarchicalGrid.isEnabled)m_broadPhase.UpdateDynamicTree();//@Can change final and non final nodes
 
@@ -150,6 +152,7 @@ void PhysicSystem::UpdatePhysics(float dt) {
 	///@Surviving pairs, with contact points, penetration and normal information have been logged to solver and MUST be colliding
 	m_narrowPhase.m_solver.Solve(dt);
 
+
 	//@Last loop: Integration
 	for (RigidbodyComponent * rb : rigidbodies) {
 		//@Integration
@@ -184,6 +187,7 @@ void PhysicSystem::UpdatePhysics(float dt) {
 		rb->m_force = Vector3::Zero;
 		rb->m_torque = Vector3::Zero;
 	}
+	
 }
 //@BROADPHASE
 bool PhysicSystem::ComputeBroadPhase(RigidbodyComponent * rb1, RigidbodyComponent * rb2) {
@@ -228,12 +232,12 @@ bool PhysicSystem::ComputeNarrowPhase(RigidbodyComponent * rb1, RigidbodyCompone
 			switch (rb2->m_shape->m_type) {
 				case ShapeType::SPHERE:
 				{
-					 return m_narrowPhase.SphereToSphere(rb1, rb2, dt);
+					 return m_narrowPhase.SphereToSphere(rb1, rb2);
 				}
 				break;
 				case ShapeType::OBB:
 				{
-					return m_narrowPhase.SphereToOBB(rb1, rb2, dt);
+					return m_narrowPhase.SphereToOBB(rb1, rb2);
 				}
 				break;
 			}
@@ -244,12 +248,12 @@ bool PhysicSystem::ComputeNarrowPhase(RigidbodyComponent * rb1, RigidbodyCompone
 			switch (rb2->m_shape->m_type) {
 				case ShapeType::SPHERE:
 				{
-					return m_narrowPhase.SphereToOBB(rb2, rb1, dt);
+					return m_narrowPhase.SphereToOBB(rb2, rb1);
 				}
 				break;
 				case ShapeType::OBB:
 				{
-					return m_narrowPhase.OBBToOBB(rb1, rb2, dt);
+					return m_narrowPhase.OBBToOBB(rb1, rb2);
 				}
 				break;
 			}

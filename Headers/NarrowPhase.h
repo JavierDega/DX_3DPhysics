@@ -10,12 +10,10 @@ public:
 	NarrowPhase();
 	~NarrowPhase();
 
-	void ApplyImpulse(DirectX::SimpleMath::Vector3 impulse, DirectX::SimpleMath::Vector3 contactVector);
 	///@Test intersection queries
-	bool SphereToSphere(RigidbodyComponent * rb1, RigidbodyComponent * rb2, float dt);
-	bool SphereToOBB(RigidbodyComponent * rb1, RigidbodyComponent * rb2, float dt);
-	bool OBBToOBB(RigidbodyComponent * rb1, RigidbodyComponent * rb2, float dt);
-	bool OBBToOBBSAT(RigidbodyComponent * rb1, RigidbodyComponent * rb2, float dt);
+	bool SphereToSphere(RigidbodyComponent * rb1, RigidbodyComponent * rb2);
+	bool SphereToOBB(RigidbodyComponent * rb1, RigidbodyComponent * rb2);
+	bool OBBToOBB(RigidbodyComponent * rb1, RigidbodyComponent * rb2);
 	//@Helpful queries
 	DirectX::SimpleMath::Vector3 FindIntersectionWithPlaneFromDistances(DirectX::SimpleMath::Vector3 start, DirectX::SimpleMath::Vector3 end, float d1, float d2);
 	//Closest point on plane to point
@@ -32,7 +30,7 @@ public:
 	//Get closest point p to a tetrahedron defined by four points
 	DirectX::SimpleMath::Vector3 ClosestPtPointTetrahedron(DirectX::SimpleMath::Vector3 p, DirectX::SimpleMath::Vector3 a, DirectX::SimpleMath::Vector3 b, DirectX::SimpleMath::Vector3 c,
 		DirectX::SimpleMath::Vector3 d);
-	//@SUtherland-Hodgmann clipping algorithm
+	//@Sutherland-Hodgmann clipping algorithm
 	std::vector<DirectX::SimpleMath::Vector3> OBBClip(DirectX::SimpleMath::Vector3 faceVertices[4], DirectX::SimpleMath::Plane supportPlanes[4], DirectX::SimpleMath::Plane referencePlane);
 
 	//Variables
