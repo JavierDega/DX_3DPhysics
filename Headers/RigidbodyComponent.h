@@ -9,7 +9,6 @@ class RigidbodyComponent :
 {
 public:
 	//Funcs
-
 	//@@@CONVENTION FOR CONSTRUCTORS:
 	//SHAPE PROPERTIES->MASS->IsKinematic->Color
 	//@TRY AND DIFFERENTIATE DIFFERENT COLLIDER SHAPES FROM DIFFERENT SHAPE PROPERTIES, DATA TYPE ORDER
@@ -26,6 +25,7 @@ public:
 	Shape * m_shape;
 	float m_mass;
 	bool m_isKinematic;
+	bool m_isSleeping, m_prevSleeping;//@Was it sleeping on the last frame?
 	//Semi euler
 	DirectX::SimpleMath::Vector3 m_force, m_acceleration, m_velocity;
 	DirectX::SimpleMath::Vector3 m_torque;//@Angular force

@@ -56,7 +56,6 @@ bool NarrowPhase::SphereToSphere(RigidbodyComponent * rb1, RigidbodyComponent * 
 	}
 	return false;
 }
-
 bool NarrowPhase::SphereToOBB(RigidbodyComponent * rb1, RigidbodyComponent * rb2)
 {
 	Sphere * sphere1 = static_cast<Sphere*>(rb1->m_shape);

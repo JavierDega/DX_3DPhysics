@@ -8,7 +8,6 @@ using namespace DirectX;
 using namespace SimpleMath;
 using namespace std;
 
-
 //Instance
 PhysicSystem * PhysicSystem::m_instance = NULL;
 PhysicSystem * PhysicSystem::GetInstance()
@@ -39,7 +38,6 @@ PhysicSystem::PhysicSystem()
 //Destructor
 PhysicSystem::~PhysicSystem()
 {
-
 }
 ///Init
 void PhysicSystem::Initialize(ID3D11Device1 * device, ID3D11DeviceContext1 * deviceContext)
@@ -115,8 +113,6 @@ void PhysicSystem::UpdatePhysics(float dt) {
 		rb->m_shape->m_AABBColor = Colors::Red;
 	}
 
-
-
 	//@Octree Update
 	if (m_hierarchicalGrid.isEnabled)m_broadPhase.UpdateDynamicTree();//@Can change final and non final nodes
 
@@ -156,7 +152,7 @@ void PhysicSystem::UpdatePhysics(float dt) {
 	//@Last loop: Integration
 	for (RigidbodyComponent * rb : rigidbodies) {
 		//@Integration
-		if (rb->m_isKinematic) {
+		if (rb->m_isKinematic) {//@Redundant?
 			rb->m_acceleration = Vector3::Zero;
 			rb->m_velocity = Vector3::Zero;
 			rb->m_angularVelocity = Vector3::Zero;
@@ -164,23 +160,45 @@ void PhysicSystem::UpdatePhysics(float dt) {
 		}
 		else
 		{
-			//Calculate generalized forces
-			rb->m_force -= m_airViscosity * rb->m_velocity;//@Viscosity
-			rb->m_force += m_gravity * rb->m_mass;//@force relative to mass
-			//@Angular drag?
-			rb->m_torque -= m_airViscosity * rb->m_angularVelocity;
+			if (!rb->m_isSleeping) {
+				//Calculate generalized forces
+				rb->m_force -= m_airViscosity * rb->m_velocity;//@Viscosity
+				//@Angular drag?
+				rb->m_torque -= m_airViscosity * rb->m_angularVelocity;
 
-			//Apply forces
-			rb->m_acceleration = rb->m_force / rb->m_mass;
-			rb->m_velocity += rb->m_acceleration*dt;
-			rb->m_owner->m_transform.m_position += rb->m_velocity*dt;
+				//Apply forces
+				rb->m_force += m_gravity * rb->m_mass;//@force relative to mass
+				rb->m_acceleration = rb->m_force / rb->m_mass;
+				rb->m_velocity += rb->m_acceleration*dt;
+				rb->m_owner->m_transform.m_position += rb->m_velocity*dt;
 
-			//Angular
-			rb->m_angularAcceleration = rb->m_torque / rb->m_mass;//For now, we use the mass scalar as our moment of inertia, our inertia tensor
-			rb->m_angularVelocity += rb->m_angularAcceleration*dt;
-			float radiansPerSecond = rb->m_angularVelocity.Length();
-			if (radiansPerSecond > FLT_EPSILON) {
-				rb->m_owner->m_transform.m_rotation *= Quaternion::CreateFromAxisAngle(rb->m_angularVelocity / radiansPerSecond, radiansPerSecond*dt);
+				//Angular
+				rb->m_angularAcceleration = rb->m_torque / rb->m_mass;//For now, we use the mass scalar as our moment of inertia, our inertia tensor
+				rb->m_angularVelocity += rb->m_angularAcceleration*dt;
+				float radiansPerSecond = rb->m_angularVelocity.Length();
+				if (radiansPerSecond > FLT_EPSILON) {
+					rb->m_owner->m_transform.m_rotation *= Quaternion::CreateFromAxisAngle(rb->m_angularVelocity / radiansPerSecond, radiansPerSecond*dt);
+				}
+
+				//Check for sleeping
+				if (rb->m_velocity.LengthSquared() < m_narrowPhase.m_solver.m_frictionCoefficient) {
+					if (rb->m_angularVelocity.LengthSquared() < m_narrowPhase.m_solver.m_frictionCoefficient) {
+						if (rb->m_prevSleeping) {
+							rb->m_isSleeping = true;
+						}
+						else {
+							rb->m_prevSleeping = true;
+						}
+					}
+				}
+				else {
+					rb->m_prevSleeping = false;
+				}
+			}
+			else {
+				//Is sleeping
+				rb->m_velocity = Vector3::Zero;
+				rb->m_angularVelocity = Vector3::Zero;
 			}
 		}
 		//Forces are computed every frame
@@ -193,6 +211,7 @@ void PhysicSystem::UpdatePhysics(float dt) {
 bool PhysicSystem::ComputeBroadPhase(RigidbodyComponent * rb1, RigidbodyComponent * rb2) {
 
 	if (rb1->m_isKinematic && rb2->m_isKinematic) return false;//@Two kinematic colliders dont need collision response
+	if (rb1->m_isSleeping && rb2->m_isSleeping) return false;//@Two sleeping objects don't process collision response (They're static)
 
 	TransformComponent t1 = rb1->m_owner->m_transform;
 	TransformComponent t2 = rb2->m_owner->m_transform;

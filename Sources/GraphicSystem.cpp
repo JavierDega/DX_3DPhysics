@@ -52,6 +52,7 @@ void GraphicSystem::Initialize(ID3D11Device1* device, ID3D11DeviceContext1 * dev
 	m_sphereCullingPrimitive = GeometricPrimitive::CreateSphere(deviceContext, 0.1f);//@Taking into account we dont do sphere culling, this primitive is designed for visualizing contact points
 
 }
+//@Init device dependent components
 void GraphicSystem::OnSceneLoad() {
 	ObjectSystem * os = ObjectSystem::GetInstance();
 	vector<RigidbodyComponent*> rigidbodies = os->GetRigidbodyComponentList();
@@ -145,10 +146,11 @@ void GraphicSystem::Update(float dt) {
 	const wchar_t * hierarchicalGrid = ps->m_hierarchicalGrid.log.c_str();
 	const wchar_t * AABBCulling = ps->m_AABBCulling.log.c_str();
 	m_font->DrawString(m_spriteBatch.get(), fps, Vector2(10, 10 + 0*15 ), Colors::Black);
-	m_font->DrawString(m_spriteBatch.get(), visualizeContacts, Vector2(10, 10 + 1 * 15), Colors::Black);
-	m_font->DrawString(m_spriteBatch.get(), uniformGrid, Vector2(10, 10 + 2 * 15), Colors::Black);
-	m_font->DrawString(m_spriteBatch.get(), hierarchicalGrid, Vector2(10, 10 + 3 * 15), Colors::Black);
-	m_font->DrawString(m_spriteBatch.get(), AABBCulling, Vector2(10, 10 + 4 * 15), Colors::Black);
+	m_font->DrawString(m_spriteBatch.get(), L"0-2(NumPad)-load scenes, R-reload, ESC-close", Vector2(10, 10 + 1 * 15), Colors::Black);
+	m_font->DrawString(m_spriteBatch.get(), visualizeContacts, Vector2(10, 10 + 2 * 15), Colors::Black);
+	m_font->DrawString(m_spriteBatch.get(), uniformGrid, Vector2(10, 10 + 3 * 15), Colors::Black);
+	m_font->DrawString(m_spriteBatch.get(), hierarchicalGrid, Vector2(10, 10 + 4 * 15), Colors::Black);
+	m_font->DrawString(m_spriteBatch.get(), AABBCulling, Vector2(10, 10 + 5 * 15), Colors::Black);
 	m_spriteBatch->End();
 
 }

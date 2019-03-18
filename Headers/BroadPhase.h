@@ -1,3 +1,5 @@
+#ifndef BROADPHASE_H_
+#define BROADPHASE_H_
 #include "RigidbodyComponent.h"
 
 struct AABBNode {
@@ -32,3 +34,4 @@ public:
 	AABBNode m_AABBTreeRoot;
 
 };
+#endif /*BROADPHASE_H_*/

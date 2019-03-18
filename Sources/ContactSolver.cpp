@@ -94,6 +94,8 @@ void ContactSolver::Solve(float dt)
 			Vector3 rb1Force = rb1->m_mass * velDelta / dt;
 			Vector3 rb2Force = rb2->m_mass * velDelta2 / dt;
 
+			Vector3 prevTorque = rb1->m_torque;
+			Vector3 prevTorque2 = rb2->m_torque;
 			for (int i = 0; i < manifold.m_points.size(); i++) {
 #pragma region Angular resolution
 				//@Now we calculate our angular resolution
@@ -106,9 +108,11 @@ void ContactSolver::Solve(float dt)
 
 #pragma endregion
 			}
+			Vector3 appliedTorque = rb1->m_torque - prevTorque;
+			Vector3 appliedTorque2 = rb2->m_torque - prevTorque2;
 
 			//3: Friction::Because of our Impulse based resolution, we need to calculate the normal force 'After the fact'
-#pragma region Kinetic friction
+#pragma region Static/Kinetic friction
 
 		//@Friction:
 		//Find component of force along normal
@@ -119,14 +123,60 @@ void ContactSolver::Solve(float dt)
 		vel1Norm.Normalize();
 		Vector3 vel2Norm = rb2->m_velocity;
 		vel2Norm.Normalize();
+		
+		Vector3 angForce1Norm = rb1->m_torque;
+		angForce1Norm.Normalize();
+		Vector3 angForce2Norm = rb2->m_torque;
+		angForce2Norm.Normalize();
 
-		Vector3 friction1 = -vel1Norm * m_frictionCoefficient * abs(normalForce);//normalForce should be positive here
+		Vector3 friction1;
+		Vector3 rotFriction1;
+		if (rb1->m_isSleeping) {
+			//Static friction model:
+			//Friction is twice the m_frictionCoefficient
+			friction1 = -vel1Norm * m_frictionCoefficient * 3 * abs(normalForce);
+			rotFriction1 = -angForce1Norm * m_frictionCoefficient * 3 * abs(normalForce);
+			if (friction1.LengthSquared() >= rb1Force.LengthSquared()) {
+				//Scale friction to be equal to rb1Force, on the opposite direction
+				friction1 = -rb1Force;
+			}
+			if (rotFriction1.LengthSquared() >= appliedTorque.LengthSquared()) {
+				//@Rescale
+				rotFriction1 = -appliedTorque;
+			}
+		}
+		else {
+			//Kinetic friction
+			friction1 = -vel1Norm * m_frictionCoefficient * abs(normalForce);
+			rotFriction1 = -angForce1Norm * m_frictionCoefficient *abs(normalForce);
+		}
 		rb1->m_force += friction1;
+		rb1->m_torque += rotFriction1;
 
-		Vector3 friction2 = -vel2Norm * m_frictionCoefficient * abs(normal2Force);//normal2Force should be negative here
+		Vector3 friction2;//normal2Force should be negative here
+		Vector3 rotFriction2;
+		if (rb2->m_isSleeping) {
+			//Static friction model:
+			//Friction is twice the m_frictionCoefficient
+			friction2 = -vel2Norm * m_frictionCoefficient * 3 * abs(normal2Force);
+			rotFriction2 = -angForce2Norm * m_frictionCoefficient * 3 * abs(normal2Force);
+			if (friction2.LengthSquared() >= rb2Force.LengthSquared()) {
+				//Scale friction to be equal to rb1Force, on the opposite direction
+				friction2 = -rb2Force;
+			}
+			if (rotFriction2.LengthSquared() >= appliedTorque2.LengthSquared()) {
+				//Scale rotFriction to be equal to appliedTorque2, on the opposite direction
+				rotFriction2 = -appliedTorque2;
+			}
+		}
+		else {
+			//Kinetic friction
+			friction2 = -vel2Norm * m_frictionCoefficient * abs(normal2Force);
+			rotFriction2 = -angForce2Norm * m_frictionCoefficient * abs(normal2Force);
+		}
 		rb2->m_force += friction2;
-		//Put to rest?
-
+		rb2->m_torque += rotFriction2;
+		
 #pragma endregion
 
 	}

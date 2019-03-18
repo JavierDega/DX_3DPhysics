@@ -125,6 +125,15 @@ void InputSystem::Update(float dt)
 	if (m_keyboardTracker.pressed.F4) {
 		ps->m_AABBCulling.isEnabled = !ps->m_AABBCulling.isEnabled;
 	}
+	if (m_keyboardTracker.pressed.NumPad0) {
+		ObjectSystem::GetInstance()->LoadScene(0);
+	}
+	if (m_keyboardTracker.pressed.NumPad1) {
+		ObjectSystem::GetInstance()->LoadScene(1);
+	}
+	if (m_keyboardTracker.pressed.NumPad2) {
+		ObjectSystem::GetInstance()->LoadScene(2);
+	}
 	if (m_keyboardTracker.pressed.M) {
 		ps->m_stepMode = !ps->m_stepMode;
 	}

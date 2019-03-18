@@ -213,16 +213,56 @@ void ObjectSystem::LoadScene( unsigned int index)
 			AddObject(sphere3);
 
 			//Set of boxes
-			for (int i = 0; i < 10; i++) {
-				for (int j = 0; j < 10; j++) {
-					GameObject * myBox = new GameObject("Box" + i + j, Vector3(4 - 2.1 * i, 5.f, -5 + 2.1 * j));
-					myBox->AddComponent(new RigidbodyComponent(Vector3(1, 1, 1)));
+			for (int i = 0; i < 6; i++) {
+				for (int j = 0; j < 6; j++) {
+					GameObject * myBox = new GameObject("Box" + i + j, Vector3(5 - 2 * i, 5.f,  -5 + 1.5 * j));
+					myBox->AddComponent(new RigidbodyComponent(Vector3(.7, .7, .7)));
 					AddObject(myBox);
+
+					GameObject * myBox2 = new GameObject("Box2" + i + j, Vector3(5 - 2 * i, 7.f, -5 + 1.5 * j));
+					myBox2->AddComponent(new RigidbodyComponent(Vector3(.7, .7, .7)));
+					AddObject(myBox2);
 				}
 			}
 		}
-
 		break;
+		case 2:
+		{
+			GameObject * sphere1 = new GameObject("Sphere1", Vector3(5.f, 1.5f, -5.f));
+			RigidbodyComponent * rb1 = new RigidbodyComponent(0.5f, 20.f, false);
+			sphere1->AddComponent(rb1);
+			AddObject(sphere1);
+
+			GameObject * tiltedPlane = new GameObject("OBB1", Vector3(5.f, -0.2f, -5.f), Quaternion::CreateFromYawPitchRoll(0,0,0.12f));
+			RigidbodyComponent * rb2 = new RigidbodyComponent(Vector3(3.f, 0.5f, 5.f), 10.f, true, Colors::Red);
+			tiltedPlane->AddComponent(rb2);
+			AddObject(tiltedPlane);
+
+			GameObject * tiltedPlane2 = new GameObject("OBB2", Vector3(-1.f, -.7f, -5.f), Quaternion::CreateFromYawPitchRoll(0, 0, 0.05f));
+			RigidbodyComponent * rb3 = new RigidbodyComponent(Vector3(3.f, 0.5f, 5.f), 20.f, true, Colors::Red);
+			tiltedPlane2->AddComponent(rb3);
+			AddObject(tiltedPlane2);
+
+			GameObject * tiltedPlane3 = new GameObject("OBB3", Vector3(-7.f, -.7f, -5.f), Quaternion::CreateFromYawPitchRoll(0, 0, -0.05f));
+			RigidbodyComponent * rb4 = new RigidbodyComponent(Vector3(3.f, 0.5f, 5.f), 20.f, true, Colors::Red);
+			tiltedPlane3->AddComponent(rb4);
+			AddObject(tiltedPlane3);
+
+			GameObject * tiltedPlane4 = new GameObject("OBB4", Vector3(-10.f, -.7f, -5.f), Quaternion::CreateFromYawPitchRoll(0, 0, -0.03f));
+			RigidbodyComponent * rb5 = new RigidbodyComponent(Vector3(3.f, 0.5f, 5.f), 20.f, true, Colors::Red);
+			tiltedPlane4->AddComponent(rb5);
+			AddObject(tiltedPlane4);
+
+			GameObject * tiltedPlane5 = new GameObject("OBB5", Vector3(-13.f, -2.7f, -5.f), Quaternion::CreateFromYawPitchRoll(0, 0, -0.03f));
+			RigidbodyComponent * rb6 = new RigidbodyComponent(Vector3(3.f, 0.5f, 5.f), 20.f, true, Colors::Red);
+			tiltedPlane5->AddComponent(rb6);
+			AddObject(tiltedPlane5);
+
+			GameObject * tiltedPlane6 = new GameObject("OBB5", Vector3(-7.f, -2.9f, -5.f), Quaternion::CreateFromYawPitchRoll(0, 0, 0.004f));
+			RigidbodyComponent * rb7 = new RigidbodyComponent(Vector3(3.f, 0.5f, 5.f), 20.f, true, Colors::Red);
+			tiltedPlane6->AddComponent(rb7);
+			AddObject(tiltedPlane6);
+		}
 	}
 	//Need to reinitialize graphical components
 	GraphicSystem::GetInstance()->OnSceneLoad();
